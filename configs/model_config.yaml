@@ -1,0 +1,38 @@
+# NeuroFusion-AD Model Configuration
+# Document ID: SAD-001 § 5.1 — Modality Encoder Architecture
+# All values are non-negotiable technical specifications per CLAUDE.md.
+
+model:
+  embed_dim: 768
+  num_heads: 8
+  gnn_layers: 3
+  gnn_hidden_dim: 768
+  dropout: 0.1
+  graph_similarity_threshold: 0.7
+
+encoders:
+  fluid_biomarker:
+    input_dim: 6
+    output_dim: 768
+  digital_acoustic:
+    input_dim: 12
+    output_dim: 768
+  digital_motor:
+    input_dim: 8
+    output_dim: 768
+  clinical_demographic:
+    input_dim: 10
+    output_dim: 768
+
+training:
+  batch_size: 16
+  learning_rate: 1e-4
+  weight_decay: 1e-5
+  max_epochs: 100
+  early_stopping_patience: 10
+
+performance_targets:
+  classification_auc: 0.85
+  regression_rmse: 3.0
+  survival_cindex: 0.75
+  inference_latency_p95_s: 2.0
