@@ -1,7 +1,8 @@
 """NeuroFusion-AD model package.
 
 Exports all four modality encoders, the cross-modal attention fusion module,
-and the patient similarity GNN for direct import by consumers.
+the patient similarity GNN, and the full integrated NeuroFusionAD model
+for direct import by consumers.
 
 Example:
     >>> from src.models import (
@@ -12,6 +13,7 @@ Example:
     ...     CrossModalAttention,
     ...     NeuroFusionGNN,
     ...     construct_patient_similarity_graph,
+    ...     NeuroFusionAD,
     ... )
 """
 
@@ -23,6 +25,7 @@ from src.models.encoders import (
 )
 from src.models.cross_modal_attention import CrossModalAttention
 from src.models.gnn import NeuroFusionGNN, construct_patient_similarity_graph
+from src.models.neurofusion_model import NeuroFusionAD, CLINICAL_DISCLAIMER
 
 __all__ = [
     "FluidBiomarkerEncoder",
@@ -32,4 +35,6 @@ __all__ = [
     "CrossModalAttention",
     "NeuroFusionGNN",
     "construct_patient_similarity_graph",
+    "NeuroFusionAD",
+    "CLINICAL_DISCLAIMER",
 ]
