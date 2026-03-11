@@ -1,0 +1,55 @@
+# NeuroFusion-AD Bio-Hermes-001 Fine-Tuning Configuration
+# Document ID: SAD-001 § 6.3 — Bio-Hermes Fine-Tuning Strategy
+#
+# IMPORTANT: Load the ADNI-trained checkpoint first, then fine-tune.
+# NEVER joint-train ADNI + Bio-Hermes from scratch (assay batch effects).
+#
+# Bio-Hermes-001 is classification-only (cross-sectional):
+#   reg_weight: 0.0  (no MMSE slope labels)
+#   surv_weight: 0.0 (no survival labels)
+#
+# Frozen modules: the 4 modality encoders are frozen.
+# Only cross_modal_attn, gnn, and classifier head are trained.
+
+training:
+  n_epochs: 50
+  batch_size: 32
+  gradient_accumulation_steps: 2       # BH N=756 train, smaller accum
+  learning_rate: 1.0e-4                # Lower LR for fine-tuning
+  weight_decay: 1.0e-4
+  early_stopping_patience: 15
+  onecycle_pct_start: 0.2              # 20% warm-up for fine-tuning
+  augmentation_noise_std: 0.005        # Reduced noise for fine-tuning
+
+loss_weights:
+  cls: 1.0    # BCEWithLogitsLoss — amyloid positivity (100% complete in BH)
+  reg: 0.0    # SKIP — Bio-Hermes-001 has no MMSE slope labels
+  surv: 0.0   # SKIP — Bio-Hermes-001 has no survival labels
+
+# Modules to freeze during fine-tuning
+# These match attribute names in NeuroFusionAD
+frozen_modules:
+  - fluid_encoder
+  - acoustic_encoder
+  - motor_encoder
+  - clinical_encoder
+
+# Pre-trained ADNI checkpoint to start from
+pretrained_checkpoint: models/final/best_model.pth
+
+data:
+  biohermes_train: data/processed/biohermes/biohermes001_train.csv
+  biohermes_val: data/processed/biohermes/biohermes001_val.csv
+  biohermes_scaler: data/processed/biohermes/biohermes_digital_scaler.pkl
+
+wandb:
+  project: neurofusion-ad
+  entity: ""
+  tags:
+    - finetune
+    - biohermes
+    - phase2b
+
+checkpoints:
+  dir: models/checkpoints/biohermes_finetuned
+  save_every_n_epochs: 5

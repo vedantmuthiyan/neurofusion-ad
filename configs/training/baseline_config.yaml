@@ -1,0 +1,47 @@
+# NeuroFusion-AD Baseline Training Configuration
+# Document ID: SAD-001 § 6.1 — Training Infrastructure
+# Train ADNI baseline first; then fine-tune Bio-Hermes-001 separately.
+# NEVER joint train from scratch (assay batch effects).
+
+model:
+  embed_dim: 768
+  num_heads: 8
+  gnn_layers: 3
+  dropout: 0.1
+  graph_threshold: 0.7
+
+training:
+  n_epochs: 100
+  batch_size: 32
+  gradient_accumulation_steps: 4       # Effective batch = 32 * 4 = 128 (ADNI N=345)
+  learning_rate: 3.0e-4
+  weight_decay: 1.0e-4
+  early_stopping_patience: 25
+  onecycle_pct_start: 0.3              # 30% of steps for warm-up
+  augmentation_noise_std: 0.01         # Gaussian noise sigma for training augmentation
+
+loss_weights:
+  cls: 1.0    # BCEWithLogitsLoss — amyloid positivity (36.2% NaN → masked)
+  reg: 0.5    # MSELoss — MMSE slope (7.8% NaN → masked)
+  surv: 0.5   # Cox partial likelihood — time-to-event
+
+data:
+  adni_train: data/processed/adni/adni_train.csv
+  adni_val: data/processed/adni/adni_val.csv
+  adni_test: data/processed/adni/adni_test.csv
+  biohermes_train: data/processed/biohermes/biohermes001_train.csv
+  biohermes_val: data/processed/biohermes/biohermes001_val.csv
+  scaler_path: data/processed/adni/scaler.pkl
+  biohermes_scaler_path: data/processed/biohermes/biohermes_digital_scaler.pkl
+
+wandb:
+  project: neurofusion-ad
+  entity: ""    # set via WANDB_ENTITY env var or leave empty
+  tags:
+    - baseline
+    - adni
+    - phase2b
+
+checkpoints:
+  dir: models/checkpoints/adni_baseline
+  save_every_n_epochs: 10
