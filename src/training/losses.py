@@ -74,7 +74,11 @@ def cox_partial_likelihood_loss(
     # Compute log of cumulative sum of exp(log_hazard) from the top (highest time)
     # This represents log(risk_set_sum) for each patient using Breslow approximation.
     # torch.cumsum on sorted-descending order gives sum of all patients with >= time.
-    log_cumsum_h = torch.logcumsumexp(lh_sorted, dim=0)  # [M]
+    # NOTE: logcumsumexp_backward is not implemented for float16 (Half).
+    # Cast to float32 so this works correctly under AMP autocast.
+    log_cumsum_h = torch.logcumsumexp(lh_sorted.float(), dim=0)  # [M]
+    lh_sorted = lh_sorted.float()
+    event_sorted = event_sorted.float()
 
     # Cox partial likelihood (Breslow): only for patients who had an event
     event_mask = event_sorted == 1
