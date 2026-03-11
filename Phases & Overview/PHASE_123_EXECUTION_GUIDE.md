@@ -902,7 +902,7 @@ class SubgroupAnalyzer:
 
 7. **Discussion**
    - Clinical utility: Aids in triage, reduces unnecessary PET scans
-   - Limitations: Synthetic digital biomarkers (ADNI), pending Bio-Hermes-002 validation
+   - Limitations: Synthetic digital biomarkers (ADNI), pending Bio-Hermes-001 validation
    - Future work: External validation on independent cohort (NACC, AIBL)
 
 8. **Conclusion**

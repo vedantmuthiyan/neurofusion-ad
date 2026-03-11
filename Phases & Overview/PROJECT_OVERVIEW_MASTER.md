@@ -129,9 +129,9 @@ NeuroFusion-AD is a Clinical Decision Support (CDS) system designed for acquisit
   - Digital: Linus Health digital cognitive tests, speech analysis, wearable sensors
   - Clinical: Standard cognitive assessments
 - **Strategic Importance**: 
-  - Roche is a partner in Bio-Hermes-002 study
+  - Roche is a partner in Bio-Hermes-001 study
   - Training on Roche's own assay data = scientific validation + business alignment
-- **Access**: Bio-Hermes-001 released August 2025 (AD Workbench), Bio-Hermes-002 pending
+- **Access**: Bio-Hermes-001 released August 2025 (AD Workbench), Bio-Hermes-001 pending
 
 **Auxiliary Dataset: DementiaBank (for digital biomarker synthesis)**:
 - **Source**: TalkBank Project (https://dementia.talkbank.org/)

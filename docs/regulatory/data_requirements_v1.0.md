@@ -23,7 +23,7 @@ status: DRAFT — requires human review before approval
 ---
 
 > ⚠️ **SYNTHETIC DATA DISCLOSURE — PHASE 1**
-> All development activities prior to ADNI/Bio-Hermes-002/DementiaBank data approval are conducted exclusively on **synthetically generated data**. Synthetic data does not contain real patient information and must not be used for final regulatory submission, clinical validation, or performance claims. This disclosure must be reproduced in all derived documents, model cards, and training reports until real-world data access is confirmed in writing.
+> All development activities prior to ADNI/Bio-Hermes-001/DementiaBank data approval are conducted exclusively on **synthetically generated data**. Synthetic data does not contain real patient information and must not be used for final regulatory submission, clinical validation, or performance claims. This disclosure must be reproduced in all derived documents, model cards, and training reports until real-world data access is confirmed in writing.
 
 ---
 
@@ -101,7 +101,7 @@ NeuroFusion-AD training and validation relies on three primary external data sou
 | Source | Modalities Covered | Expected N (MCI) | Access Mechanism | Timeline |
 |---|---|---|---|---|
 | ADNI | Fluid biomarkers, Clinical/Demographic | ~1,200 | DUA via LONI Portal | 1–2 weeks |
-| Bio-Hermes-002 | Plasma biomarkers (extended panel) | ~500 | DUA via study PI | 2–4 weeks |
+| Bio-Hermes-001 | Plasma biomarkers (extended panel) | ~500 | DUA via study PI | 2–4 weeks |
 | DementiaBank (Pitt Corpus) | Acoustic (speech) features | ~300 recordings | DUA via TalkBank | 1–2 weeks |
 
 ---
@@ -159,11 +159,11 @@ Per the ADNI DUA (current version):
 
 ---
 
-### 3.3 Bio-Hermes-002
+### 3.3 Bio-Hermes-001
 
 #### 3.3.1 Dataset Description
 
-Bio-Hermes-002 is a prospective observational study (NCT04937972) specifically designed to evaluate plasma-based biomarkers for AD detection, including pTau-217 (Lilly Quanterix Simoa assay), Aβ42/40, NfL, and GFAP. It provides a community-based (non-academic medical center) cohort that complements ADNI's predominantly academic recruitment, improving demographic generalizability.
+Bio-Hermes-001 is a prospective observational study (NCT04937972) specifically designed to evaluate plasma-based biomarkers for AD detection, including pTau-217 (Lilly Quanterix Simoa assay), Aβ42/40, NfL, and GFAP. It provides a community-based (non-academic medical center) cohort that complements ADNI's predominantly academic recruitment, improving demographic generalizability.
 
 **Key distinguishing features:**
 
@@ -182,7 +182,7 @@ Step 1: Investigator Contact
   └─ Timeline: 1–2 weeks for initial response
 
 Step 2: Data Sharing Agreement (DSA)
-  └─ Parties: NeuroFusion-AD institution + Bio-Hermes-002 study site(s)
+  └─ Parties: NeuroFusion-AD institution + Bio-Hermes-001 study site(s)
   └─ Legal review required: Yes — institutional legal counsel review mandated
   └─ Key provisions to negotiate:
        - Permitted analysis scope
@@ -203,7 +203,7 @@ Step 4: Secure Transfer
 
 #### 3.3.3 Data Unique Contribution
 
-| Feature | ADNI | Bio-Hermes-002 |
+| Feature | ADNI | Bio-Hermes-001 |
 |---|---|---|
 | pTau-217 (Simoa) | Surrogate (pTau-181) | ✅ Direct measurement |
 | Community-based recruitment | Limited | ✅ Primary design feature |
@@ -269,7 +269,7 @@ All fields are mapped to **HL7 FHIR R4** resources to ensure interoperability wi
 
 ### 4.2 Fluid Biomarker Schema
 
-**Source tables:** ADNI (CSF/plasma panels), Bio-Hermes-002 (plasma panels)
+**Source tables:** ADNI (CSF/plasma panels), Bio-Hermes-001 (plasma panels)
 **FHIR Resource Base:** `Observation` (profile: `us-core-observation-lab`)
 
 | Field Name | Type | Valid Range | Units | Required / Optional | FHIR Mapping |
@@ -312,7 +312,7 @@ BIOMARKER_HARD_LIMITS = {
 
 ### 4.3 Clinical and Demographic Schema
 
-**Source tables:** ADNI (PTDEMOG, MMSE tables), Bio-Hermes-002 (clinical assessments)
+**Source tables:** ADNI (PTDEMOG, MMSE tables), Bio-Hermes-001 (clinical assessments)
 **FHIR Resource Base:** `Patient`, `Observation`, `Condition`
 
 | Field Name | Type | Valid Range | Units | Required / Optional | FHIR Mapping |

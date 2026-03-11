@@ -273,7 +273,7 @@ PHASE1_DOCUMENTS = [
         Include:
         1. Data Sources:
            - ADNI (Alzheimer's Disease Neuroimaging Initiative): access process, expected ~1,200 MCI patients
-           - Bio-Hermes-002: access process, expected ~500 patients with plasma biomarkers
+           - Bio-Hermes-001: access process, expected ~500 patients with plasma biomarkers
            - DementiaBank (Pitt Corpus): access process, ~300 audio recordings
         
         2. Data Schema Specification:
@@ -411,7 +411,7 @@ status: DRAFT — requires human review before approval
 ---
 
 """
-                Path(output_path).write_text(header + content)
+                Path(output_path).write_text(header + content, encoding="utf-8")
                 print(f"✅ Saved: {output_path}")
                 saved += 1
         else:
