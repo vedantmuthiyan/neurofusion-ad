@@ -1,0 +1,136 @@
+# ADNI Column Mapping — NeuroFusion-AD Phase 2A
+# Generated: 2026-03-11
+# Agent: data-explorer-agent
+# IMPORTANT: ALL column names below are verified from actual file headers
+
+patient_id_column: "RID"        # integer participant ID used in most files (dtype float in .rda, cast to int)
+patient_id_string: "PTID"       # string format "011_S_0003" used in ROCHE_ELECSYS, APOERES, rda files
+visit_column_master: "VISCODE"  # visit code in UPENNBIOMK_MASTER: 'bl', 'm12', 'm24', 'm36', 'm48', 'm60', 'm72', 'm84'
+visit_column_roche: "VISCODE2"  # visit code in ROCHE_ELECSYS: 'bl', 'm12', ..., 'm186'
+visit_column_rda: "VISCODE"     # visit code in ADNIMERGE2 rda files
+
+source_files:
+
+  csf_biomarkers:
+    primary: "data/raw/adni/UPENNBIOMK_MASTER_28Feb2026.csv"
+    secondary: "data/raw/adni/UPENNBIOMK_ROCHE_ELECSYS_28Feb2026.csv"
+    columns:
+      ptau181: "PTAU"          # CSF pTau181 (pg/mL) in MASTER file — proxy for plasma pTau217
+      abeta42_master: "ABETA"  # CSF Abeta42 (pg/mL) in MASTER file — amyloid label source
+      tau_total: "TAU"         # CSF total tau (pg/mL) in MASTER file
+      abeta42_roche: "ABETA42" # CSF Abeta42 (pg/mL) from Roche Elecsys file
+      abeta40_roche: "ABETA40" # CSF Abeta40 (pg/mL) from Roche Elecsys file (mostly NaN in early visits)
+      ptau_roche: "PTAU"       # CSF pTau181 (pg/mL) from Roche Elecsys file
+
+  plasma_biomarkers:
+    file: "data/raw/adni/UPENN_PLASMA_FUJIREBIO_QUANTERIX_28Feb2026.csv"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      ptau217: "pT217_F"       # plasma pTau-217 by Fujirebio (pg/mL) — PRIMARY plasma pTau
+      abeta42: "AB42_F"        # plasma Abeta42 by Fujirebio (pg/mL)
+      abeta40: "AB40_F"        # plasma Abeta40 by Fujirebio (pg/mL)
+      abeta_ratio: "AB42_AB40_F"  # plasma Abeta42/Abeta40 ratio by Fujirebio
+      nfl_quanterix: "NfL_Q"  # plasma NfL by Quanterix Simoa (pg/mL)
+      gfap_quanterix: "GFAP_Q" # plasma GFAP by Quanterix Simoa (pg/mL)
+      nfl_fujirebio: "NfL_F"   # plasma NfL by Fujirebio (pg/mL)
+      gfap_fujirebio: "GFAP_F" # plasma GFAP by Fujirebio (pg/mL)
+
+  apoe:
+    file: "data/raw/adni/APOERES_28Feb2026.csv"
+    columns:
+      patient_id: "RID"
+      patient_id_string: "PTID"
+      visit: "VISCODE"
+      genotype: "GENOTYPE"     # values: '2/2', '2/3', '2/4', '3/3', '3/4', '4/4'
+    derived:
+      apoe4_count: "split GENOTYPE on '/', count '4' occurrences → integer 0, 1, or 2"
+
+  demographics:
+    file: "data/raw/adni/ADNIMERGE2/data/PTDEMOG.rda"
+    rda_key: "PTDEMOG"
+    columns:
+      patient_id: "RID"        # stored as float in rda; cast to int
+      patient_id_string: "PTID"
+      visit: "VISCODE"
+      sex: "PTGENDER"          # values: 'Male', 'Female'
+      birth_year: "PTDOBYY"    # year of birth (float); derive age = exam_year - PTDOBYY
+      birth_date: "PTDOB"      # string 'MM/YYYY' format
+      education_years: "PTEDUCAT"  # years of education (float)
+      ethnicity: "PTETHCAT"    # 'Not Hispanic or Latino', 'Hispanic or Latino'
+      race: "PTRACCAT"         # 'White', 'Black or African Amer.', 'Asian', etc.
+
+  mmse:
+    file: "data/raw/adni/ADNIMERGE2/data/MMSE.rda"
+    rda_key: "MMSE"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      score: "MMSCORE"         # total MMSE score 0–30 (161 NaN values); primary regression label
+      visit_date: "VISDATE"    # date of MMSE visit
+
+  diagnosis:
+    file: "data/raw/adni/ADNIMERGE2/data/DXSUM.rda"
+    rda_key: "DXSUM"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      diagnosis: "DIAGNOSIS"   # values: 'MCI' (n=6565), 'CN' (n=6275), 'Dementia' (n=2996)
+      exam_date: "EXAMDATE"
+
+  registry:
+    file: "data/raw/adni/ADNIMERGE2/data/REGISTRY.rda"
+    rda_key: "REGISTRY"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      exam_date: "EXAMDATE"    # use for computing years_from_baseline
+
+  cdr:
+    file: "data/raw/adni/ADNIMERGE2/data/CDR.rda"
+    rda_key: "CDR"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      cdr_global: "CDGLOBAL"   # CDR global score (0, 0.5, 1, 2, 3)
+      cdr_sob: "CDRSB"         # CDR Sum of Boxes (0–18; more sensitive)
+
+  csf_abeta_mass_spec:
+    file: "data/raw/adni/UPENNMSMSABETA2CRM_28Feb2026.csv"
+    columns:
+      patient_id: "RID"
+      visit: "VISCODE"
+      abeta42_crm: "ABETA42CRM"  # CRM-standardized Abeta42 by mass spec
+      abeta42: "ABETA42"
+      abeta40: "ABETA40"
+      abeta38: "ABETA38"
+
+label_derivation:
+  amyloid_positive:
+    primary_source: "data/raw/adni/UPENNBIOMK_MASTER_28Feb2026.csv"
+    source_col: "ABETA"          # CSF Abeta42 (pg/mL) in MASTER file
+    cutoff: 192                  # < 192 pg/mL = amyloid positive (ADNI/UPENN standard cutoff)
+    note: "MASTER file uses Upenn immunoassay; Roche Elecsys has different cutoff (~1000 pg/mL). Confirm cutoff per assay."
+    secondary_source: "data/raw/adni/UPENNBIOMK_ROCHE_ELECSYS_28Feb2026.csv"
+    secondary_col: "ABETA42"     # Roche Elecsys Abeta42 (different units/assay)
+
+  mmse_slope:
+    method: "linear_regression_per_patient"
+    x_col: "years_from_baseline"   # derived from EXAMDATE in REGISTRY.rda
+    y_col: "MMSCORE"               # from MMSE.rda
+    min_visits: 2                  # require at least 2 visits for slope estimation
+
+  mci_filter:
+    column: "DIAGNOSIS"            # from DXSUM.rda
+    values: ["MCI"]                # ADNI DXSUM uses 'MCI' (not EMCI/LMCI as separate codes)
+    note: "ADNI DXSUM DIAGNOSIS has 3 values only: 'MCI', 'CN', 'Dementia'. No EMCI/LMCI split in this column."
+
+  time_to_event:
+    event: "conversion from MCI to Dementia"
+    event_col: "DIAGNOSIS"        # from DXSUM.rda; event when DIAGNOSIS == 'Dementia'
+    time_col: "EXAMDATE"          # from REGISTRY.rda or DXSUM.rda
+
+missing_value_codes: [-1, -4]  # ADNI uses both as missing indicators; replace with NaN before processing
+
+visit_baseline_code: "bl"      # ADNI baseline visit code (lowercase)
+visit_screening_code: "sc"     # screening visit (before baseline; use 'bl' as actual baseline)

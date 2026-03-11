@@ -1,0 +1,244 @@
+# Bio-Hermes-001 Column Mapping — NeuroFusion-AD Phase 2A
+# Generated: 2026-03-11
+# Agent: data-explorer-agent
+# IMPORTANT: ALL column names below are verified from actual file headers
+# NOTE: This study is Bio-Hermes-001, NOT Bio-Hermes-002
+
+study_name: "Bio-Hermes-001"
+study_id_field: "BIO-HERMES"       # value in STUDYID column of all files
+patient_id_column: "USUBJID"       # primary ID across all files: "BIO-HERMES-00101-NNN"
+patient_id_short: "SUBJID"         # short form: "00101-NNN" (only in DM.csv)
+
+# All lab/functional test files use SDTM long format:
+# - LBTESTCD / FTTESTCD / NVTESTCD = analyte code (filter on this)
+# - LBSTRESN / FTSTRESN / NVSTRESN = numeric result value
+# - LBSTRESU / FTSTRESU / NVSTRESU = units
+# - VISITNUM = numeric visit number
+# - VISIT = visit name string
+
+source_files:
+
+  ptau217_lilly:
+    file: "data/raw/biohermes/BIOHERMES001/BloodBasedBiomarkers/Lilly/pTau217_Data/LB_LILLY_CLINICAL_DIAGNOST.csv"
+    description: "PRIMARY pTau-217 source — Lilly immunoassay"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "LBTESTCD"
+      test_name: "LBTEST"
+      result_numeric: "LBSTRESN"
+      result_char: "LBSTRESC"
+      result_original: "LBORRES"
+      units: "LBSTRESU"
+      visit_num: "VISITNUM"
+      visit_name: "VISIT"
+      date: "LBDTC"
+    filter:
+      LBTESTCD: "TAU217P"          # pTau-217 (Lilly immunoassay)
+    ptau217_col: "LBSTRESN"        # numeric pTau-217 value
+
+  ptau217_gothenburg:
+    file: "data/raw/biohermes/BIOHERMES001/BloodBasedBiomarkers/University of Gothenburg/LB_UNIVERSITY_OF_GOTHENBUR.csv"
+    description: "SECONDARY pTau-217 source — University of Gothenburg immunoassay"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "LBTESTCD"
+      result_numeric: "LBSTRESN"
+      units: "LBSTRESU"
+      visit_num: "VISITNUM"
+    filter:
+      LBTESTCD: "TAU217P"
+
+  roche_panel:
+    file: "data/raw/biohermes/BIOHERMES001/BloodBasedBiomarkers/Roche Diagnostics/LB_ROCHE.csv"
+    description: "Roche Diagnostics plasma panel: Abeta42/40, NfL, GFAP, pTau181"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "LBTESTCD"
+      result_numeric: "LBSTRESN"
+      result_char: "LBSTRESC"
+      units: "LBSTRESU"
+      visit_num: "VISITNUM"
+    test_codes:
+      abeta40: "AMYLB40"           # Amyloid Beta 1-40
+      abeta42: "AMYLB42"           # Amyloid Beta 1-42
+      apoe4: "APOE4"               # Apolipoprotein E4
+      gfap: "GFAP"                 # Glial Fibrillary Acidic Protein
+      nfl: "NFLP"                  # Neurofilament Light Chain Protein
+      ptau181: "TAU181P"           # Phosphorylated Tau Protein 181 (proxy for pTau217)
+      tau_phospho: "TPROTP"        # Phosphorylated Tau Protein (total)
+
+  quanterix_panel:
+    file: "data/raw/biohermes/BIOHERMES001/BloodBasedBiomarkers/Quanterix/LB_QUANTERIX_CORPORATION.csv"
+    description: "Quanterix Simoa panel: NfL, GFAP, pTau181, Abeta42/40"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "LBTESTCD"
+      result_numeric: "LBSTRESN"
+      units: "LBSTRESU"
+      visit_num: "VISITNUM"
+    test_codes:
+      abeta_ratio: "AB4042"        # Abeta42/Abeta40 ratio (pre-computed)
+      abeta40: "AMYLB40"
+      abeta42: "AMYLB42"
+      gfap: "GFAP"                 # Simoa GFAP
+      nfl: "NFLP"                  # Simoa NfL
+      ptau181: "TAU181P"           # Simoa pTau181
+
+  c2n_panel:
+    file: "data/raw/biohermes/BIOHERMES001/BloodBasedBiomarkers/C2N/LB_C2N.csv"
+    description: "C2N Precivity AD: amyloid probability score + Abeta42/40"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "LBTESTCD"
+      result_numeric: "LBSTRESN"
+      result_char: "LBSTRESC"
+      units: "LBSTRESU"
+    test_codes:
+      abeta_ratio: "AB4042"
+      abeta40: "AMYLB40"
+      abeta42: "AMYLB42"
+      apoe: "APOE"
+      amyloid_probability_score: "APS"   # C2N validated amyloid probability score
+      interpretation: "INTP"
+
+  demographics:
+    file: "data/raw/biohermes/BIOHERMES001/GAP-Clinical/DM.csv"
+    columns:
+      patient_id: "USUBJID"
+      patient_id_short: "SUBJID"
+      age: "AGE"               # age in years (integer; mean=72, range 59–85)
+      sex: "SEX"               # 'F' (Female=564) or 'M' (Male=441)
+      race: "RACE"             # 'WHITE', 'BLACK OR AFRICAN AMERICAN', 'ASIAN', etc.
+      ethnicity: "ETHNIC"      # ethnicity category
+      study_start_date: "RFSTDTC"  # reference start date (ISO 8601)
+      country: "COUNTRY"
+
+  education:
+    file: "data/raw/biohermes/BIOHERMES001/GAP-Clinical/SC.csv"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "SCTESTCD"
+      result_original: "SCORRES"    # years of education (string)
+      result_char: "SCSTRESC"       # years of education (standardized string)
+    filter:
+      SCTESTCD: "EDUYRNUM"          # years of education (1,005 records — one per patient)
+    education_col: "SCSTRESC"       # cast to int for years of education
+
+  amyloid_classification:
+    file: "data/raw/biohermes/BIOHERMES001/GAP-Clinical/NV.csv"
+    description: "PRIMARY amyloid positivity ground truth"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "NVTESTCD"
+      result_char: "NVSTRESC"       # 'POSITIVE' or 'NEGATIVE'
+      result_original: "NVORRES"
+      result_numeric: "NVSTRESN"
+      visit_num: "VISITNUM"
+      visit_name: "VISIT"
+      date: "NVDTC"
+    filter_primary:
+      NVTESTCD: "AMYCLAS"           # Subject amyloid classification (NVSTRESC: 'POSITIVE'/'NEGATIVE')
+    filter_secondary:
+      NVTESTCD: "AMYCLASV"          # VisQ Amyloid Classification (NVSTRESC: 'POSITIVE'/'NEGATIVE')
+    amyloid_label_col: "NVSTRESC"   # use 'POSITIVE' as amyloid+ label
+
+  amyloid_pet_quantitative:
+    file: "data/raw/biohermes/BIOHERMES001/OtherAssessments/Lilly SUVR & Centiloid/NV_ELI_LILLY.csv"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "NVTESTCD"
+      result_numeric: "NVSTRESN"
+      units: "NVSTRESU"
+      visit_num: "VISITNUM"
+      visit_name: "VISIT"
+      date: "NVDTC"
+    test_codes:
+      centiloid: "CENTLOID"         # Centiloid value; threshold > 24.4 = amyloid positive
+      suvr: "SUVR"                  # Standard Uptake Value Ratio
+      regional_counts: "COUNTS"
+
+  acoustic_features:
+    file: "data/raw/biohermes/BIOHERMES001/DigitalTests/Aural Analytics/FT_AURAL_ANALYTICS.csv"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "FTTESTCD"
+      test_name: "FTTEST"
+      result_numeric: "FTSTRESN"
+      result_char: "FTSTRESC"
+      result_original: "FTORRES"
+      units: "FTSTRESU"
+      quality_flag: "FTACPTFL"      # filter FTACPTFL == 'Y' for quality-accepted records
+      category: "FTCAT"
+      visit_num: "VISITNUM"
+      date: "FTDTC"
+    quality_filter:
+      FTACPTFL: "Y"
+    feature_mapping:
+      speaking_rate: "CA65CBDF"     # MEAN SENTENCE ASR SPEAKING RATE
+      pause_rate: "MAD174CB"        # MEAN SENTENCE PAUSE RATE (→ jitter proxy)
+      monotonicity: "MAC168D2"      # MEAN IMAGE DESCR MONOTONICITY (→ shimmer proxy)
+      intraword_pause: "CA55A559"   # MEAN VISUAL NAMING INTRAWORD PAUSE TIME
+      verbal_fluency: "CA67FDBA"    # MEAN CATEGORY NAMING VERBAL FLUENCY
+      image_speaking_rate: "CA6E2CA5"  # MEAN IMAGE DESCR ASR SPEAKING RATE
+      delayed_story_recall: "CA37153B"
+      object_recall: "CA52304B"
+      image_descr_score: "CA5550C4"
+      naming_total_dur: "MA8D60D3"  # MEAN VISUAL NAMING TOTAL DUR
+
+  motor_features:
+    file: "data/raw/biohermes/BIOHERMES001/DigitalTests/Linus/FT_LINUS_HEALTH.csv"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "FTTESTCD"
+      test_name: "FTTEST"
+      result_numeric: "FTSTRESN"
+      quality_flag: "FTACPTFL"
+      visit_num: "VISITNUM"
+      date: "FTDTC"
+    quality_filter:
+      FTACPTFL: "Y"
+    feature_mapping:
+      spiral_cw_dom: "SPCWDTM"      # Spiral CW Dominant Time
+      spiral_cw_nondom: "SPCWNTM"   # Spiral CW Non-Dominant Time
+      spiral_ccw_dom: "SPCCWDTM"    # Spiral CCW Dominant Time
+      spiral_ccw_nondom: "SPCCWNTM" # Spiral CCW Non-Dominant Time
+      trails_b_time: "TRLSTIME"     # Trails B Time to Complete
+      trails_b_accuracy: "TRLSACC"  # Trails B Accuracy
+      sdmt_accuracy: "SDMTACC"      # Symbol Digit Modalities Test accuracy
+      sdmt_attempted: "SDMTATTP"    # SDMT Attempted Boxes
+      digit_naming_mean_rt: "DNMNRT"
+      digit_naming_median_rt: "DNMEDRT"
+      digit_naming_throughput: "DNMNTHRU"
+      digit_naming_pct_correct: "DNPCTCOR"
+      dcr_summary: "DCRSCR"         # DCR Summary Score
+      dcr_clock_score: "DCRDCTSC"   # DCR DCTclock Score
+      dcr_delayed_recall: "DCRDLRCL"
+
+  mmse_scores:
+    file: "data/raw/biohermes/BIOHERMES001/GAP-Clinical/FT.csv"
+    description: "MMSE total score embedded in combined FT file"
+    columns:
+      patient_id: "USUBJID"
+      test_code: "FTTESTCD"
+      result_numeric: "FTSTRESN"
+      visit_num: "VISITNUM"
+      visit_name: "VISIT"
+      date: "FTDTC"
+    filter:
+      FTTESTCD: "MMS112"            # MMS1-Total Score = MMSE total
+    mmse_col: "FTSTRESN"
+
+label_derivation:
+  amyloid_positive:
+    primary_source: "GAP-Clinical/NV.csv"
+    filter: "NVTESTCD == 'AMYCLAS'"
+    label_col: "NVSTRESC"
+    positive_value: "POSITIVE"
+    negative_value: "NEGATIVE"
+    centiloid_threshold: 24.4       # for NV_ELI_LILLY.csv Centiloid-based classification
+
+  # NOTE: Bio-Hermes-001 is cross-sectional (not longitudinal for progression)
+  # No MMSE slope or survival labels available in this dataset
+  # Use Bio-Hermes-001 only for: amyloid positivity classification label
+
+visit_baseline_num: 1              # VISITNUM = 1 is typically baseline
