@@ -83,6 +83,7 @@ def _validate_features(
     ranges: dict[int, tuple[float, float]],
     names: dict[int, str],
     encoder_name: str,
+    skip_range_check: bool = False,
 ) -> None:
     """Validate that feature tensor values are within physiological ranges.
 
@@ -91,16 +92,23 @@ def _validate_features(
         ranges: Mapping from feature index to (min_val, max_val) tuple.
         names: Mapping from feature index to human-readable feature name.
         encoder_name: Name of the calling encoder, used in error messages.
+        skip_range_check: If True, skip physiological range checks (used during
+            training with StandardScaler-normalized inputs where raw ranges
+            do not apply). NaN check is always performed.
 
     Raises:
-        ValueError: If any feature contains NaN values or values outside
-            the defined physiological range for that feature.
+        ValueError: If any feature contains NaN values or (when
+            skip_range_check is False) values outside the defined
+            physiological range for that feature.
     """
     if torch.isnan(x).any():
         raise ValueError(
             f"[{encoder_name}] Input contains NaN values. "
             "Ensure all biomarker measurements are valid before calling encode()."
         )
+
+    if skip_range_check:
+        return
 
     for idx, (lo, hi) in ranges.items():
         feature_col = x[:, idx]
@@ -225,6 +233,7 @@ class FluidBiomarkerEncoder(nn.Module):
             ranges=_FLUID_RANGES,
             names=_FLUID_RANGE_NAMES,
             encoder_name="FluidBiomarkerEncoder",
+            skip_range_check=self.training,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(
@@ -312,6 +321,7 @@ class DigitalAcousticEncoder(nn.Module):
             ranges=_ACOUSTIC_RANGES,
             names=_ACOUSTIC_RANGE_NAMES,
             encoder_name="DigitalAcousticEncoder",
+            skip_range_check=self.training,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(
@@ -478,6 +488,7 @@ class ClinicalDemographicEncoder(nn.Module):
             ranges=_CLINICAL_RANGES,
             names=_CLINICAL_RANGE_NAMES,
             encoder_name="ClinicalDemographicEncoder",
+            skip_range_check=self.training,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(
