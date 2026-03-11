@@ -1,6 +1,6 @@
 # Phase 2A Exit Checklist — Data Exploration, Cleaning & RunPod Setup
 
-**Status**: IN PROGRESS — Steps 1-6 complete, awaiting RunPod credentials for Step 7
+**Status**: COMPLETE — all steps done, awaiting human gate review before Phase 2 training
 **Last Updated**: 2026-03-11
 
 ---
@@ -58,19 +58,17 @@
 
 ## 7. RunPod Setup (runpod-setup-agent)
 
-- [ ] RunPod pod created (RTX 3090, Network Volume attached)
-- [ ] SSH MCP connected from local Claude Code session
-- [ ] Python packages installed on RunPod
-- [ ] Project repo cloned to `/workspace/neurofusion-ad/`
-- [ ] Processed data uploaded to RunPod
-- [ ] W&B authenticated on RunPod
-- [ ] Environment variables configured in `/workspace/.env`
-- [ ] Final verification passed (model loads, data loads, GPU confirmed)
-
-**BLOCKED**: Awaiting user to provide RunPod credentials (SSH IP/port, password, W&B API key, GitHub repo URL)
+- [x] RunPod pod confirmed: RTX 3090 (24GB VRAM), 260TB network volume, CUDA 12.1
+- [x] SSH connected: root@213.192.2.120:40012 (key auth)
+- [x] Python packages installed (torch 2.1.2+cu121, pyg 2.5.0, numpy 1.24.1, wandb 0.25.1, pyreadr, structlog)
+- [x] Project repo at `/workspace/neurofusion-ad/` — up to date with main (9135b2c)
+- [x] Processed data uploaded to RunPod (6 files: ADNI train/val/test + scaler, BioH train/val)
+- [x] W&B authenticated on RunPod (`~/.netrc` configured)
+- [x] Environment variables configured in `/workspace/.env`
+- [x] Final verification passed: e2e sanity check passed, all data loads, GPU confirmed
 
 ## 8. Completion
 
-- [ ] `PHASE2A_COMPLETE.md` written with final statistics
-- [ ] Everything committed to git
-- [ ] **STOPPED — awaiting human gate review before Phase 2 training**
+- [x] `PHASE2A_COMPLETE.md` written with final statistics
+- [x] Everything committed to git
+- [x] **STOPPED — awaiting human gate review before Phase 2 training**
