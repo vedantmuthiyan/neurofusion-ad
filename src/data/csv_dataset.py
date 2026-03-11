@@ -142,7 +142,7 @@ class NeuroFusionCSVDataset(Dataset):
         "motor_sdmt_acc", "motor_sdmt_attempted", "motor_spiral_cw_dom",
         "motor_trails_b_acc", "motor_trails_b_time",
     ]
-    BH_CLINICAL_BASE_COLS = ["AGE", "SEX_CODE", "EDUCATION_YEARS", "MMSE_BASELINE"]
+    BH_CLINICAL_BASE_COLS = ["AGE", "SEX_CODE", "EDUCATION_YEARS", "MMSE_BASELINE", "ABETA40_PLASMA"]
 
     def __init__(
         self,
