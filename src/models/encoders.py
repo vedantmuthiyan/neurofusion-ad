@@ -233,7 +233,7 @@ class FluidBiomarkerEncoder(nn.Module):
             ranges=_FLUID_RANGES,
             names=_FLUID_RANGE_NAMES,
             encoder_name="FluidBiomarkerEncoder",
-            skip_range_check=self.training,
+            skip_range_check=True,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(
@@ -321,7 +321,7 @@ class DigitalAcousticEncoder(nn.Module):
             ranges=_ACOUSTIC_RANGES,
             names=_ACOUSTIC_RANGE_NAMES,
             encoder_name="DigitalAcousticEncoder",
-            skip_range_check=self.training,
+            skip_range_check=True,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(
@@ -488,7 +488,7 @@ class ClinicalDemographicEncoder(nn.Module):
             ranges=_CLINICAL_RANGES,
             names=_CLINICAL_RANGE_NAMES,
             encoder_name="ClinicalDemographicEncoder",
-            skip_range_check=self.training,
+            skip_range_check=True,
         )
         embedding: torch.Tensor = self.net(x)
         log.debug(

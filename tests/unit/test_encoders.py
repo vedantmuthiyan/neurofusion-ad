@@ -190,40 +190,53 @@ class TestFluidBiomarkerEncoder:
             out = encoder(x)
         assert out is not None
 
-    def test_fluid_invalid_ptau_raises(self, encoder: FluidBiomarkerEncoder) -> None:
-        """pTau-217 above 100 pg/mL must raise ValueError.
-
-        Args:
-            encoder: FluidBiomarkerEncoder fixture.
-        """
-        x = _make_fluid_valid()
-        x[:, 0] = 150.0  # pTau-217 above range [0.1, 100]
-        with pytest.raises(ValueError, match="pTau-217"):
-            encoder(x)
-
-    def test_fluid_invalid_abeta_ratio_low_raises(
+    def test_fluid_out_of_raw_range_accepted_when_normalized(
         self, encoder: FluidBiomarkerEncoder
     ) -> None:
-        """Abeta42/40 ratio below 0.01 must raise ValueError.
+        """Encoder accepts values outside raw physiological ranges.
+
+        Range validation moved to InputValidator (API boundary). Encoders receive
+        StandardScaler-normalized values so raw-range checks are disabled.
 
         Args:
             encoder: FluidBiomarkerEncoder fixture.
         """
         x = _make_fluid_valid()
-        x[:, 1] = 0.001  # below minimum 0.01
-        with pytest.raises(ValueError, match="Abeta42/40"):
-            encoder(x)
+        x[:, 0] = 150.0  # raw out-of-range; fine as normalized value
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
-    def test_fluid_invalid_nfl_raises(self, encoder: FluidBiomarkerEncoder) -> None:
-        """NfL below 5 pg/mL must raise ValueError.
+    def test_fluid_normalized_negative_abeta_accepted(
+        self, encoder: FluidBiomarkerEncoder
+    ) -> None:
+        """Normalized negative Abeta ratio accepted (would be invalid raw).
 
         Args:
             encoder: FluidBiomarkerEncoder fixture.
         """
         x = _make_fluid_valid()
-        x[:, 2] = 1.0  # NfL below range [5, 200]
-        with pytest.raises(ValueError, match="NfL"):
-            encoder(x)
+        x[:, 1] = -0.5
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
+
+    def test_fluid_normalized_nfl_accepted(
+        self, encoder: FluidBiomarkerEncoder
+    ) -> None:
+        """Normalized NfL below raw minimum accepted by encoder.
+
+        Args:
+            encoder: FluidBiomarkerEncoder fixture.
+        """
+        x = _make_fluid_valid()
+        x[:, 2] = -0.7
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
     def test_fluid_nan_input_raises(self, encoder: FluidBiomarkerEncoder) -> None:
         """NaN in any feature must raise ValueError.
@@ -326,31 +339,37 @@ class TestDigitalAcousticEncoder:
             out = encoder(x)
         assert out is not None
 
-    def test_acoustic_invalid_jitter_raises(
+    def test_acoustic_out_of_raw_range_accepted_when_normalized(
         self, encoder: DigitalAcousticEncoder
     ) -> None:
-        """Jitter above 0.05 must raise ValueError.
+        """Encoder accepts normalized jitter values outside raw range.
+
+        Range validation moved to InputValidator. Encoders receive normalized values.
 
         Args:
             encoder: DigitalAcousticEncoder fixture.
         """
         x = _make_acoustic_valid()
-        x[:, 0] = 0.1  # jitter above range [0.0001, 0.05]
-        with pytest.raises(ValueError, match="jitter"):
-            encoder(x)
+        x[:, 0] = 0.1  # raw out-of-range; fine as normalized value
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
-    def test_acoustic_invalid_shimmer_raises(
+    def test_acoustic_normalized_shimmer_accepted(
         self, encoder: DigitalAcousticEncoder
     ) -> None:
-        """Shimmer above 0.30 must raise ValueError.
+        """Normalized shimmer above raw range accepted by encoder.
 
         Args:
             encoder: DigitalAcousticEncoder fixture.
         """
         x = _make_acoustic_valid()
-        x[:, 1] = 0.5  # shimmer above range [0.001, 0.30]
-        with pytest.raises(ValueError, match="shimmer"):
-            encoder(x)
+        x[:, 1] = 0.5  # raw out-of-range; fine as normalized value
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
     def test_acoustic_nan_input_raises(self, encoder: DigitalAcousticEncoder) -> None:
         """NaN in any feature must raise ValueError.
@@ -541,31 +560,37 @@ class TestClinicalDemographicEncoder:
             out = encoder(x)
         assert out is not None
 
-    def test_clinical_invalid_mmse_high_raises(
+    def test_clinical_out_of_raw_mmse_range_accepted_normalized(
         self, encoder: ClinicalDemographicEncoder
     ) -> None:
-        """MMSE above 30 must raise ValueError.
+        """Encoder accepts normalized MMSE outside raw [0, 30] range.
+
+        Range validation moved to InputValidator. Encoder receives normalized values.
 
         Args:
             encoder: ClinicalDemographicEncoder fixture.
         """
         x = _make_clinical_valid()
-        x[:, 3] = 35.0  # MMSE above valid range [0, 30]
-        with pytest.raises(ValueError, match="MMSE"):
-            encoder(x)
+        x[:, 3] = 35.0  # raw out-of-range; fine as normalized value
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
-    def test_clinical_invalid_mmse_negative_raises(
+    def test_clinical_negative_normalized_mmse_accepted(
         self, encoder: ClinicalDemographicEncoder
     ) -> None:
-        """Negative MMSE must raise ValueError.
+        """Normalized negative MMSE accepted (would be invalid raw).
 
         Args:
             encoder: ClinicalDemographicEncoder fixture.
         """
         x = _make_clinical_valid()
-        x[:, 3] = -1.0  # MMSE below valid range [0, 30]
-        with pytest.raises(ValueError, match="MMSE"):
-            encoder(x)
+        x[:, 3] = -1.0  # normalized value
+        import torch as _t
+        with _t.no_grad():
+            out = encoder(x)
+        assert out.shape[-1] == 768
 
     def test_clinical_nan_input_raises(
         self, encoder: ClinicalDemographicEncoder
