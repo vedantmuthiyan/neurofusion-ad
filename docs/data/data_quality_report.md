@@ -10,10 +10,10 @@
 ### Patient Counts
 | Split | N   | Amyloid+ | Amyloid+ Rate |
 |-------|-----|----------|---------------|
-| Train | 345 | 139      | 62.6%         |
-| Val   |  74 |  32      | 65.3%         |
-| Test  |  75 |  29      | 65.9%         |
-| Total | 494 | 200      | 63.8% (of those with CSF label) |
+| Train | 345 | 139      | 40.3%         |
+| Val   |  74 |  32      | 43.2%         |
+| Test  |  75 |  29      | 38.7%         |
+| Total | 494 | 200      | 40.5%         |
 
 Notes:
 - 494 MCI-baseline patients survived all merges.
@@ -41,8 +41,8 @@ Note: All patients in the final dataset have plasma biomarker data (PTAU217, ABE
 2. **Acoustic features synthesized**: ADNI has no speech/acoustic data. All 12 acoustic features for ADNI are synthesized from clinically plausible distributions using `np.random.default_rng(42)` (documented in DRD-001).
 3. **Motor features synthesized**: No wearable/tablet motor data in ADNI. All 8 motor features synthesized using `np.random.default_rng(43)` (documented in DRD-001).
 4. **CSF pTau181 used alongside plasma pTau217**: Different assay, different range. Both are included as separate features. Regulatory limitation documented in DRD-001.
-5. **AMYLOID_POSITIVE label missing for 36.2% of final patients**: CSF Abeta42 not available for all patients even when plasma biomarkers are available. These patients are excluded from classification label training but retained for regression and survival tasks.
-6. **Demographics baseline filter yielded only 8 patients**: PTDEMOG.rda filtered to VISCODE=='bl' returned only 8 rows. This is because PTDEMOG has per-subject (not per-visit) records; most entries use visit code 'sc' (screening) rather than 'bl'. All demographic values (SEX_CODE, EDUCATION_YEARS, PTDOBYY) come from the APOE file or registry merge for the majority of patients. Demographics show as NaN for most patients in the merged dataset. This is a known ADNI data structure issue — a future fix should use all PTDEMOG records (not filtered to 'bl') since demographics are time-invariant.
+5. **AMYLOID_POSITIVE label missing for ~59.5% of final patients**: CSF Abeta42 not available for all 494 patients even when plasma biomarkers are available (200 of 494 have valid label). These patients are excluded from classification label training but retained for regression and survival tasks.
+6. **PTDEMOG screening visit fix applied**: Initial implementation filtered PTDEMOG to VISCODE=='bl', returning only 8 rows. Fixed to prefer VISCODE=='sc' (screening), which is where ADNI collects demographic data. After fix: age_null=0.0%, sex_null=0.0% across all splits.
 
 ---
 
@@ -94,7 +94,7 @@ Note: All 10 acoustic features and 15 motor features are present in Bio-Hermes-0
 
 ---
 
-## Known Issues for Next Session
-1. **ADNI demographics baseline filter**: PTDEMOG.rda filtered to 'bl' returns only 8 rows. Should load all PTDEMOG rows (time-invariant) and deduplicate by RID instead of filtering to baseline visit code.
-2. **Assay batch effects**: ADNI plasma biomarkers use Fujirebio/Quanterix assays; Bio-Hermes-001 uses Lilly (pTau217) and Roche (NfL, GFAP, Abeta). Domain adaptation required before training joint models.
-3. **Bio-Hermes-001 acoustic/motor unscaled**: Only 7 features were normalized using the ADNI scaler. Acoustic and motor features from Bio-Hermes-001 are in raw units and need standardization.
+## Known Issues for Phase 2 Training
+1. **Assay batch effects**: ADNI plasma biomarkers use Fujirebio/Quanterix assays; Bio-Hermes-001 uses Lilly (pTau217) and Roche (NfL, GFAP, Abeta). Domain adaptation required before training joint models.
+2. **Bio-Hermes-001 acoustic/motor unscaled**: Only 7 features were normalized using the ADNI scaler. Acoustic and motor features from Bio-Hermes-001 are in raw units and need per-modality standardization during Phase 2.
+3. **ADNI amyloid label only 40.5% coverage**: 294 of 494 MCI patients lack CSF amyloid data — consider using plasma pTau217 ratio or UPENNMSMSABETA as secondary label source in Phase 2.

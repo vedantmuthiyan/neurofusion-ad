@@ -182,8 +182,13 @@ def load_demographics() -> pd.DataFrame:
     """
     df = _read_rda(PTDEMOG_RDA, "PTDEMOG")
     df = _replace_missing(df)
-    # Baseline only — PTDEMOG is effectively cross-sectional but filter to bl
-    df_bl = df[df["VISCODE"].str.lower() == BASELINE_VISIT].drop_duplicates("RID", keep="first")
+    # PTDEMOG records are collected at SCREENING ('sc'), NOT baseline ('bl').
+    # Prefer 'sc', fall back to any record per RID (demographics are stable across visits).
+    sc_mask = df["VISCODE"].str.lower() == "sc"
+    if sc_mask.sum() > 10:
+        df_bl = df[sc_mask].drop_duplicates("RID", keep="first")
+    else:
+        df_bl = df.drop_duplicates("RID", keep="first")
     # Encode sex: Male=1, Female=0
     df_bl["SEX_CODE"] = df_bl["PTGENDER"].map({"Male": 1, "Female": 0}).fillna(-1).astype(int)
     df_bl = df_bl.rename(columns={"PTEDUCAT": "EDUCATION_YEARS"})
