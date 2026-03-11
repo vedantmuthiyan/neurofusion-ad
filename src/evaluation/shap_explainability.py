@@ -150,13 +150,24 @@ class NeuralFusionSHAPExplainer:
     def _model_wrapper(self, X: np.ndarray) -> np.ndarray:
         """Wrapper converting numpy array to model input dict and back.
 
+        Processes inputs in chunks of max 64 to prevent OOM in the GNN's
+        O(N²) patient similarity graph construction.
+
         Args:
             X: numpy array of shape [n, 36] with concatenated features.
 
         Returns:
             Amyloid probabilities as numpy array of shape [n].
         """
+        _MAX_CHUNK = 64
         n = X.shape[0]
+        if n > _MAX_CHUNK:
+            # Chunk large SHAP batches to avoid OOM in GNN similarity matrix
+            chunks = []
+            for start in range(0, n, _MAX_CHUNK):
+                chunks.append(self._model_wrapper(X[start:start + _MAX_CHUNK]))
+            return np.concatenate(chunks)
+
         fluid = torch.tensor(
             X[:, :FLUID_DIM], dtype=torch.float32
         )
