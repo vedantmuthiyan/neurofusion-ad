@@ -1,0 +1,99 @@
+version: "3.9"
+
+# NeuroFusion-AD Production Stack
+#
+# Services:
+#   api       — FastAPI FHIR inference endpoint (port 8000)
+#   db        — PostgreSQL 15 audit log database (port 5432)
+#   redis     — Redis 7 rate-limit / request-id cache (port 6379)
+#
+# Usage:
+#   docker-compose up --build -d
+#   docker-compose logs -f api
+#
+# IEC 62304 traceability: SAD-001 § 5.4
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: neurofusion-ad:latest
+    container_name: neurofusion_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      MODEL_PATH: /app/models/final/best_model.pth
+      SCALER_PATH: /app/data/processed/adni/scaler.pkl
+      TEMPERATURE: "0.756"
+      MC_SAMPLES: "30"
+      DATABASE_URL: postgresql://neurofusion:neurofusion@db:5432/neurofusion
+      NEUROFUSION_API_KEY: "${NEUROFUSION_API_KEY:-}"
+    volumes:
+      # Model checkpoint (populated from RunPod / CI)
+      - ./models/final:/app/models/final:ro
+      # Scaler (fitted on ADNI train set)
+      - ./data/processed/adni:/app/data/processed/adni:ro
+      # Application logs
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - neurofusion_net
+
+  db:
+    image: postgres:15-alpine
+    container_name: neurofusion_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: neurofusion
+      POSTGRES_USER: neurofusion
+      POSTGRES_PASSWORD: neurofusion
+    volumes:
+      - neurofusion_pgdata:/var/lib/postgresql/data
+      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurofusion -d neurofusion"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - neurofusion_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: neurofusion_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - neurofusion_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - neurofusion_net
+
+volumes:
+  neurofusion_pgdata:
+  neurofusion_redis_data:
+
+networks:
+  neurofusion_net:
+    driver: bridge
