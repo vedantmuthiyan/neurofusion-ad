@@ -41,6 +41,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.models.neurofusion_model import NeuroFusionAD
 from src.data.dataset import generate_synthetic_adni
+from src.data.csv_dataset import NeuroFusionCSVDataset
 from src.evaluation.shap_explainability import NeuralFusionSHAPExplainer
 
 log = structlog.get_logger(__name__)
@@ -103,46 +104,57 @@ def main() -> None:
             checkpoint=args.checkpoint,
         )
 
-    # Load model
-    model = NeuroFusionAD()
+    # Load model — Phase 2B: embed_dim=256, num_heads=4 (remediated architecture)
     if not use_dry_run:
-        try:
-            checkpoint = torch.load(
-                args.checkpoint, map_location="cpu", weights_only=True
-            )
-            if "model_state_dict" in checkpoint:
-                model.load_state_dict(checkpoint["model_state_dict"])
-            else:
-                model.load_state_dict(checkpoint)
-            log.info("Loaded checkpoint", path=args.checkpoint)
-        except Exception as exc:
-            log.warning(
-                "Failed to load checkpoint; using random weights",
-                error=str(exc),
-            )
+        ckpt_raw = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
+        ckpt_cfg = ckpt_raw.get("config", {})
+        embed_dim = int(ckpt_cfg.get("embed_dim", 256))
+        num_heads = int(ckpt_cfg.get("num_heads", 4))
+        dropout = float(ckpt_cfg.get("dropout", 0.4))
+        model = NeuroFusionAD(embed_dim=embed_dim, num_heads=num_heads, dropout=dropout)
+        state = ckpt_raw.get("model_state_dict", ckpt_raw)
+        model.load_state_dict(state)
+        log.info("Loaded checkpoint", path=args.checkpoint, embed_dim=embed_dim, num_heads=num_heads)
     else:
+        model = NeuroFusionAD(embed_dim=256, num_heads=4, dropout=0.4)
         log.info("Dry run: using randomly-initialised model weights")
 
     model.eval()
 
-    # Generate/load background and test datasets
-    log.info("Generating background dataset", n=args.n_background + args.n_explain)
-    full_dataset = generate_synthetic_adni(
-        n_samples=args.n_background + args.n_explain, seed=0
-    )
+    from torch.utils.data import DataLoader
 
-    from torch.utils.data import DataLoader, Subset
-    background_dataset = Subset(full_dataset, list(range(args.n_background)))
-    test_dataset = Subset(
-        full_dataset,
-        list(range(args.n_background, args.n_background + args.n_explain)),
-    )
+    # Phase 2B: use real ADNI CSVs (not synthetic) so feature dims match checkpoint
+    adni_train_path = PROJECT_ROOT / "data" / "processed" / "adni" / "adni_train.csv"
+    adni_test_path = PROJECT_ROOT / "data" / "processed" / "adni" / "adni_test.csv"
 
-    background_loader = DataLoader(background_dataset, batch_size=args.n_background)
-    test_loader = DataLoader(test_dataset, batch_size=args.n_explain)
-
-    background_batches = list(background_loader)
-    test_batches = list(test_loader)
+    if not use_dry_run and adni_train_path.exists() and adni_test_path.exists():
+        log.info("Loading real ADNI datasets for SHAP")
+        train_ds = NeuroFusionCSVDataset(
+            str(adni_train_path), mode="adni", fit_imputation=True
+        )
+        test_ds = NeuroFusionCSVDataset(
+            str(adni_test_path), mode="adni", fit_imputation=False,
+            imputation_stats=train_ds.imputation_stats,
+        )
+        background_loader = DataLoader(train_ds, batch_size=args.n_background, shuffle=True)
+        test_loader = DataLoader(test_ds, batch_size=args.n_explain, shuffle=False)
+        background_batches = [next(iter(background_loader))]
+        test_batches = [next(iter(test_loader))]
+    else:
+        log.info("Generating background dataset (synthetic fallback)", n=args.n_background + args.n_explain)
+        full_dataset = generate_synthetic_adni(
+            n_samples=args.n_background + args.n_explain, seed=0
+        )
+        from torch.utils.data import Subset
+        background_dataset = Subset(full_dataset, list(range(args.n_background)))
+        test_dataset = Subset(
+            full_dataset,
+            list(range(args.n_background, args.n_background + args.n_explain)),
+        )
+        background_loader = DataLoader(background_dataset, batch_size=args.n_background)
+        test_loader = DataLoader(test_dataset, batch_size=args.n_explain)
+        background_batches = list(background_loader)
+        test_batches = list(test_loader)
 
     log.info(
         "Background/test data ready",
