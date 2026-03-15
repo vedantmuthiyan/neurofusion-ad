@@ -704,12 +704,12 @@ def _run_real_evaluation(
     threshold_metrics = _compute_threshold_metrics(adni_inf["amyloid_label"], adni_inf["amyloid_logit"])
 
     try:
-        _plot_roc_curve(adni_inf["amyloid_label"], probs_adni,
+        _plot_roc_curve(y_true_valid, probs_valid,
                         str(FIGURES_DIR / "roc_curve.png"), title="ROC — ADNI Test (Phase 2B)")
-        _plot_confusion_matrix(adni_inf["amyloid_label"], probs_adni,
+        _plot_confusion_matrix(y_true_valid, probs_valid,
                                str(FIGURES_DIR / "confusion_matrix.png"),
                                threshold=threshold_metrics["optimal_threshold"])
-        cal_eval.plot_reliability_diagram(probs_adni, adni_inf["amyloid_label"],
+        cal_eval.plot_reliability_diagram(probs_valid, y_true_valid,
                                           str(FIGURES_DIR / "calibration_plot.png"))
     except Exception as exc:
         log.warning("ADNI figure failed", error=str(exc))
