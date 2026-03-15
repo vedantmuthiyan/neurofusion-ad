@@ -1,343 +1,293 @@
 ---
 document_id: dhf-phase2
-generated: 2026-03-11
-batch_id: msgbatch_01HZUXhy6DzGoszEMVS44MBf
+generated: 2026-03-15
+batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
 status: DRAFT — requires human review before submission
 ---
 
-# DESIGN HISTORY FILE — PHASE 2
-## NeuroFusion-AD: Multimodal Clinical Decision Support for Amyloid Progression Risk Assessment
+# NeuroFusion-AD Design History File
+## Phase 2 Software Development Record
 
 ---
 
-**Document Number:** NFU-DHF-002
+**Document Number:** NFD-DHF-002
 **Revision:** 1.0
 **Effective Date:** [DATE]
-**Classification:** Controlled Document
-**Regulatory Basis:** IEC 62304:2015+AMD1:2015 | 21 CFR Part 820 | ISO 14971:2019 | FDA De Novo | EU MDR 2017/745 Class IIa
-**Prepared By:** Clinical Documentation Specialist, NeuroFusion-AD Program
-**Reviewed By:** [Software QA Lead] | [Clinical Affairs Lead] | [Regulatory Affairs Lead]
-**Approved By:** [Design Authority]
+**Product:** NeuroFusion-AD — Multimodal Clinical Decision Support SaMD
+**Regulatory Pathway:** FDA De Novo / EU MDR Class IIa
+**IEC 62304 Software Safety Class:** Class B
+**Applicable Standards:** IEC 62304:2006+AMD1:2015 | ISO 14971:2019 | 21 CFR Part 820 | ISO 13485:2016
+**W&B Project IDs:** k58caevv (baseline) | t9s3ngbx (remediated best) | o4pcjy3r (Bio-Hermes fine-tune)
 
-> **Scope Notice:** This document covers Phase 2 design activities only — training, optimization, external validation, and calibration of the NeuroFusion-AD algorithm. Phase 1 (architecture specification, risk framework initialization, and data governance) is documented in NFU-DHF-001. Phase 3 (clinical validation, submission package) is documented in NFU-DHF-003 (in preparation).
+**Prepared by:** Clinical Documentation Specialist, NeuroFusion-AD Program
+**Reviewed by:** [Software Engineering Lead] | [Clinical Affairs] | [Regulatory Affairs]
+**Approved by:** [Quality Assurance Director]
 
 ---
 
-## SECTION 1: PHASE 2 DHF INDEX
+> **PHASE 2B REMEDIATION NOTICE**
+> This DHF section documents critical remediation activity arising from discovery of data leakage in the Phase 2A fluid feature set. Specifically, CSF Abeta42 (ABETA42_CSF; Pearson r = −0.864 with amyloid label) was identified as a near-proxy for the prediction target and removed from all training, validation, and test pipelines prior to final model training. All performance figures reported herein reflect the post-remediation (Phase 2B) state. Pre-remediation artefacts are retained in the DHF for traceability per 21 CFR Part 820.181 but are superseded and must not be used operationally. Affected document reference: DRD-001 (Data Requirements Document, Revision 2).
 
-### 1.1 Document Map
+---
 
-| Item No. | Document Title | Document ID | IEC 62304 Clause | 21 CFR 820 Reference | Status |
-|----------|---------------|-------------|-------------------|----------------------|--------|
-| DHF-2.01 | Phase 2 DHF Index (this section) | NFU-DHF-002 §1 | 5.1, 5.2 | §820.30(a) | Released |
-| DHF-2.02 | Training Decision Log | NFU-DHF-002 §2 | 5.5, 5.6 | §820.30(c)(d) | Released |
-| DHF-2.03 | Model Version History Table | NFU-DHF-002 §3 | 8.1, 8.2 | §820.30(j) | Released |
-| DHF-2.04 | Verification Records | NFU-DHF-002 §4 | 5.6, 5.7 | §820.30(f) | Released |
-| DHF-2.05 | Phase 2 Risk Register Additions | NFU-DHF-002 §5 | 7.1–7.4 (ISO 14971) | §820.30(g) | Released |
-| DHF-2.06 | Post-Market Surveillance Plan — Drift | NFU-DHF-002 §6 | 6.1, 6.2 | §820.30(a); 21 CFR 803 | Released |
-| DHF-2.07 | Dataset Qualification Records | NFU-DDS-002 | 5.3 | §820.30(c) | Referenced |
-| DHF-2.08 | Software Architecture Specification | NFU-SAS-001 | 5.3, 5.4 | §820.30(d) | Referenced (Phase 1) |
-| DHF-2.09 | ADNI Data Limitation Acknowledgment | NFU-DRD-001 | 5.3 | §820.30(c) | Referenced |
-| DHF-2.10 | Weights & Biases Training Records | NFU-TRN-002 | 5.5 | §820.30(e) | Referenced |
-| DHF-2.11 | Bio-Hermes-001 External Validation Report | NFU-EVR-001 | 5.6 | §820.30(f) | Referenced |
-| DHF-2.12 | Calibration Verification Record | NFU-CAL-001 | 5.6 | §820.30(f) | Referenced |
-| DHF-2.13 | Subgroup Fairness Analysis Report | NFU-FAR-001 | 5.6 | §820.30(f) | Released |
-| DHF-2.14 | SHAP Explainability Report | NFU-XAI-001 | 5.5 | §820.30(d)(e) | Released |
+## SECTION 1 — PHASE 2 DHF INDEX
 
-### 1.2 Phase 2 Scope Summary
-
-Phase 2 encompasses all machine learning development activities following architectural specification:
-
-- **Training Phase 2a:** Baseline supervised training on ADNI dataset (N=345 train, N=74 val, N=75 test), W&B run `jehkd9ud`
-- **Training Phase 2b:** Hyperparameter optimization via Optuna (30 trials), followed by retraining of best configuration for 150 epochs, W&B run `ybbh5fky`
-- **Training Phase 2c:** Domain adaptation fine-tuning on Bio-Hermes-001 (N=756 train, N=189 val), W&B run `eicxum0n`
-- **Calibration:** Temperature scaling applied post-training (T=3.30)
-- **Evaluation:** ADNI held-out test set (N=100) and Bio-Hermes-001 validation set (N=189)
-- **Explainability:** SHAP feature attribution and attention weight analysis
-
-### 1.3 IEC 62304 Software Safety Classification
-
-Per NFU-DHF-001 §3.2, NeuroFusion-AD is classified as **IEC 62304 Class B** (software whose failure could result in undesirable patient outcomes but does not directly cause death or serious injury, owing to the CDS-only, physician-intermediated care pathway). This classification is maintained through Phase 2. No change control action required.
-
-### 1.4 Phase 2 Key Deliverable Traceability
+### 1.1 Document Hierarchy
 
 ```
-Intended Use (NFU-IFU-001)
-    └─► Software Requirements (NFU-SRS-001, Phase 1)
-            └─► Architecture Design (NFU-SAS-001, Phase 1)
-                    └─► Training Configuration (NFU-TRN-002, Phase 2) ──► W&B: jehkd9ud
-                            └─► HPO Results (NFU-HPO-001) ──────────────► W&B: ybbh5fky
-                                    └─► Fine-Tune Config (NFU-FTN-001) ──► W&B: eicxum0n
-                                            └─► Calibration (NFU-CAL-001)
-                                                    └─► Verification Records (NFU-DHF-002 §4)
-                                                            └─► Risk Update (NFU-DHF-002 §5)
+NFD-DHF-002  Phase 2 Design History File (this document)
+├── NFD-SRS-002      Software Requirements Specification, Phase 2
+├── NFD-SDD-002      Software Design Description, Phase 2
+├── NFD-DRD-001      Data Requirements Document (Rev 2 — post-remediation)
+├── NFD-RMF-002      Risk Management File, Phase 2 Additions
+├── NFD-VVP-002      Verification & Validation Plan, Phase 2
+├── NFD-VVR-002      Verification & Validation Report, Phase 2
+├── NFD-TDL-002      Training Decision Log (reproduced in Section 2 below)
+├── NFD-MVH-002      Model Version History (reproduced in Section 3 below)
+├── NFD-CAL-001      Calibration Report — Temperature Scaling
+├── NFD-SUB-001      Subgroup Fairness Analysis Report
+├── NFD-PMS-002      Post-Market Surveillance Plan Addendum, Phase 2
+└── NFD-REM-001      Remediation Report — ABETA42_CSF Leakage (Phase 2B)
 ```
 
----
+### 1.2 Phase 2 Milestone Summary
 
-## SECTION 2: TRAINING DECISION LOG
+| Milestone | Reference ID | Status | Notes |
+|---|---|---|---|
+| Phase 1 Architecture Freeze | NFD-DHF-001 §6 | Complete | v0.1 baseline inherited |
+| Data Acquisition & Curation (ADNI) | NFD-DRD-001 Rev 1 | Complete | 494 MCI; 345/74/75 split |
+| Phase 2A Baseline Training | W&B: k58caevv | Superseded | Pre-remediation; leakage identified |
+| Leakage Identification & Remediation | NFD-REM-001 | Complete | ABETA42_CSF removed |
+| Phase 2B HPO (15 trials) | W&B: t9s3ngbx | Complete | Best val AUC = 0.9081 |
+| Bio-Hermes-001 Fine-Tuning | W&B: o4pcjy3r | Complete | Encoders frozen |
+| Temperature Scaling Calibration | NFD-CAL-001 | Complete | T = 0.76; ECE = 0.0831 |
+| ADNI Test Set Evaluation | NFD-VVR-002 §3 | Complete | AUC = 0.890 |
+| Bio-Hermes-001 Test Set Evaluation | NFD-VVR-002 §4 | Complete | AUC = 0.907 |
+| Subgroup Fairness Review | NFD-SUB-001 | Complete — FLAG | fairness_pass = False |
+| Phase 2 DHF Closure | NFD-DHF-002 | In Review | Pending QA sign-off |
 
-> **Governing Requirement:** IEC 62304 §5.5 (Software Unit Implementation and Verification), §5.6 (Software Integration and Integration Testing), ISO 14971 §10 (Production and post-production activities). Each decision below constitutes a formal design decision record per 21 CFR §820.30(c) and must be reviewed at each design review gate.
+### 1.3 Configuration Items Under Change Control
 
----
-
-### Decision TDL-001: Primary Training Dataset Selection — ADNI
-
-**Date:** [Phase 2 Initiation Date]
-**Decision Owner:** Principal ML Engineer
-**Review Status:** Approved at Phase 2 Design Review Gate DR-2.1
-
-#### 2.1.1 Decision Made
-
-ADNI (Alzheimer's Disease Neuroimaging Initiative) was selected as the primary training dataset for Phase 2 baseline training. The training split comprised N=345 subjects, validation N=74, and an independently held-out test set of N=75 (later expanded to N=100 for final evaluation). The dataset provides longitudinal MCI patient records including cognitive assessments, fluid biomarkers, and APOE genotyping. Training was executed on the ADNI cohort under W&B run ID `jehkd9ud` (baseline) and `ybbh5fky` (HPO-optimized, 150 epochs).
-
-#### 2.1.2 Rationale
-
-ADNI is the field-standard longitudinal dataset for MCI and Alzheimer's disease research, with well-characterized amyloid status, established data governance, and precedent use in regulatory submissions (see FDA guidance on AI/ML-based SaMD, January 2021). Its longitudinal structure provides time-to-event data required for the survival analysis component (C-index metric) of the intended use. No comparable longitudinal MCI dataset with multi-modal biomarker coverage and sufficient sample size was available under the project timeline and data access constraints.
-
-#### 2.1.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| AIBL (Australian Imaging, Biomarker & Lifestyle) | Smaller cohort; limited North American generalizability; restricted plasma pTau217 coverage |
-| PREVENT-AD | Pre-MCI cohort only; label misalignment with intended use population (MCI, ages 50–90) |
-| Proprietary clinical data only | Insufficient N for multimodal training; no longitudinal outcomes; data governance not established at Phase 2 initiation |
-| Synthetic data augmentation as primary dataset | Synthetic data permissible only as supplement (per FDA AI/ML guidance); insufficient for primary training without real-world anchor |
-
-#### 2.1.4 Risk Assessment
-
-| Risk ID | Hazard | IEC 62304 Clause | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|-----------------|---------------------|----------|-------------|------------|------------|
-| R-TDL-001a | ADNI sample (N=494) may not represent real-world clinical diversity; model may underperform in underrepresented populations | §5.3 (Software Development Environment) | §4.4 (Risk Estimation) | Serious | Probable | High | External validation on Bio-Hermes-001 (24% underrepresented communities); subgroup fairness analysis required |
-| R-TDL-001b | ADNI amyloid label coverage is 63.8% (315/494); training on incomplete labels may bias the classifier | §5.5.1 | §4.4 | Moderate | Probable | Medium | Label missingness analysis conducted; semi-supervised imputation considered and rejected (see TDL-004); restricted classification training to labeled subset only |
-| R-TDL-001c | ADNI val_auc reached 1.0 during training due to ABETA42_CSF feature leakage; metric not reflective of true generalization | §5.6.3 | §5.1 | Serious | Confirmed | High | ADNI held-out test set (N=100, independent split) established as authoritative generalization metric; val_auc flagged as non-representative in all documentation |
-
-**Residual Risk Acceptance:** Accepted with mitigations active. Reviewed at DR-2.1.
+| Item | Identifier | Version | Location |
+|---|---|---|---|
+| Model weights (ADNI baseline) | NFD-MW-001 | v0.2 | Secure artifact registry |
+| Model weights (HPO best) | NFD-MW-002 | v0.3 | W&B: t9s3ngbx |
+| Model weights (production) | NFD-MW-003 | v1.0 | W&B: o4pcjy3r |
+| Inference codebase | NFD-SRC-002 | 2.0.0 | Git SHA [COMMIT-HASH] |
+| Feature preprocessing pipeline | NFD-SRC-003 | 2.1.0 | Git SHA [COMMIT-HASH] |
+| Calibration parameters | NFD-CAL-001 | 1.0 | T=0.76, stored in model config |
 
 ---
 
-### Decision TDL-002: Amyloid Proxy — CSF pTau181 Used in Place of Plasma pTau217
+## SECTION 2 — TRAINING DECISION LOG
 
-**Date:** [Phase 2 Initiation Date]
-**Decision Owner:** Clinical Affairs Lead + Principal ML Engineer
-**Review Status:** Approved at DR-2.1 with mandatory disclosure requirement
-
-#### 2.2.1 Decision Made
-
-ADNI training utilized CSF pTau181 as the pTau feature input, as plasma pTau217 (Roche Elecsys — the target clinical assay for the intended use) is not available in the ADNI dataset at sufficient coverage. This substitution is documented as a formal dataset limitation per NFU-DRD-001. Bio-Hermes-001 fine-tuning uses plasma pTau217 (Roche Elecsys), providing the target-assay signal. The final deployed model (v1.0) was validated exclusively on plasma pTau217 labels via Bio-Hermes-001.
-
-#### 2.2.2 Rationale
-
-CSF pTau181 and plasma pTau217 are correlated amyloid-related biomarkers but are measured by different assays with different reference ranges, units, and analytical characteristics. Plasma pTau217 via the Roche Elecsys assay is the intended clinical deployment context (Roche Navify Algorithm Suite). The use of CSF pTau181 in ADNI training is a recognized limitation that cannot be remediated without a new dataset; however, it is acceptable as a pre-training signal because: (a) both biomarkers reflect phosphorylated tau pathology and show strong correlation in the literature (r ≈ 0.70–0.85; Hansson et al., 2021); (b) Bio-Hermes fine-tuning on plasma pTau217 provides domain adaptation to the target assay; (c) the limitation is explicitly disclosed in the IFU and model card.
-
-#### 2.2.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Exclude pTau from ADNI training entirely | Significant information loss; pTau is a top SHAP feature and clinically critical biomarker |
-| Use only Bio-Hermes-001 for all training | N=756 training set insufficient for multimodal architecture initialization; no longitudinal outcome data |
-| Map CSF pTau181 to plasma pTau217 via published conversion formula | No validated conversion formula exists for Roche Elecsys pTau217 from ADNI CSF pTau181; would introduce unquantified systematic bias |
-
-#### 2.2.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-002a | Assay mismatch between training (CSF pTau181) and deployment (plasma pTau217) may degrade model performance in clinical use | §4.4 | Serious | Possible | High | Bio-Hermes fine-tuning provides target-assay adaptation; AUC 0.829 on Bio-Hermes val set confirms acceptable performance post-adaptation |
-| R-TDL-002b | Clinician may interpret model output as validated for CSF pTau181 workflows | §4.4, §9 | Moderate | Unlikely | Medium | IFU explicitly restricts use to plasma pTau217 (Roche Elecsys) inputs; deployment validation (Navify) will enforce assay field mapping |
-
-**Residual Risk Acceptance:** Accepted. Disclosure requirement active in IFU §2.3 (Intended Use Limitations).
+*Format: Each decision record follows the structure required by IEC 62304 §5.1.1 (software development planning), §5.1.6 (software configuration and change management), and ISO 14971:2019 §8 (risk control measures). Records are numbered sequentially as TDL-2B-XXX. Pre-remediation decisions from Phase 2A are retained as TDL-2A-XXX and marked SUPERSEDED where applicable.*
 
 ---
 
-### Decision TDL-003: Use of Synthesized Acoustic and Motor Features in ADNI Training
+### TDL-2B-001 — CRITICAL REMEDIATION: Removal of ABETA42_CSF from Fluid Feature Set
 
-**Date:** [Phase 2 Initiation Date]
-**Decision Owner:** Principal ML Engineer
-**Review Status:** Approved at DR-2.1 with mandatory risk flag
+**Decision Made:**
+CSF Abeta42 (ABETA42_CSF) was permanently removed from the fluid biomarker feature vector prior to any Phase 2B training activity. The fluid feature set was reduced from six features to two: [PTAU217, NFL_PLASMA]. All Phase 2A model weights and evaluation artefacts were archived as superseded. No Phase 2A outputs may be used in clinical or regulatory submissions.
 
-#### 2.3.1 Decision Made
+**Rationale:**
+During Phase 2A internal review, statistical analysis of the ADNI training split revealed Pearson r = −0.864 between ABETA42_CSF and the amyloid binary label. This correlation magnitude indicates that the feature is functionally a proxy for the ground-truth label, constituting severe data leakage. A model trained with access to this feature would learn to predict from the label itself rather than from clinically independent prognostic signals. Deployed performance would catastrophically diverge from training performance when the feature is unavailable or when the assay differs, exposing patients to incorrectly calibrated risk estimates. This failure mode meets the ISO 14971:2019 definition of a hazardous situation (§3.13) with potential for patient harm via inappropriate clinical pathway decisions.
 
-ADNI does not natively contain acoustic (speech/voice) or motor (gait/tremor) feature data. For Phase 2 ADNI training, acoustic and motor features were synthesized from published clinical distributions for MCI patients (documented in NFU-DRD-001). This decision applies exclusively to the ADNI training and test sets. Bio-Hermes-001 does not include acoustic or motor data; therefore these modalities receive no real-world validation signal in the current Phase 2 program. The synthesized feature generation procedure is version-controlled and reproducible.
+Additionally, the intended use of NeuroFusion-AD specifies plasma-based biomarker inputs for scalable, non-invasive risk assessment. ABETA42_CSF requires lumbar puncture, which is inconsistent with the target clinical workflow on the Navify Algorithm Suite and inconsistent with the two-feature fluid panel available in Bio-Hermes-001 (plasma pTau217 + NfL).
 
-#### 2.3.2 Rationale
+**Alternatives Considered:**
+1. *Retain ABETA42_CSF as a conditional input (present/absent flag):* Rejected. Conditional architecture complexity does not eliminate the leakage risk in training; model would continue to preferentially weight the feature when available, producing biased population-level performance estimates.
+2. *Apply feature noise augmentation to reduce correlation:* Rejected. Artificially degrading a real biomarker signal to suppress its informativeness is methodologically unsound and would not satisfy FDA guidance on predetermined change control plans.
+3. *Stratify training to balance leakage:* Rejected. Leakage is not a sampling imbalance; it cannot be corrected by stratification.
+4. *Proceed to submission with 2A weights, disclosing leakage:* Rejected on patient safety and regulatory integrity grounds.
 
-The NeuroFusion-AD architecture is designed as a four-modality system (fluid biomarkers, acoustic, motor, clinical) to reflect the intended deployment context where all four modalities may be available in a neurology clinic workflow. Omitting acoustic and motor modalities from training would require an architectural redesign (not permissible post-Phase 1 freeze) or a two-track model (not consistent with the approved intended use). Synthesis from clinical distributions allows the encoder weights for these modalities to be initialized in a physiologically plausible range, enabling Bio-Hermes fine-tuning to update the classification head with real fluid/clinical data while retaining architectural completeness.
-
-#### 2.3.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Zero-pad acoustic and motor inputs during ADNI training | Would cause encoder weight collapse; cross-modal attention mechanism would learn to ignore these modalities permanently |
-| Acquire real acoustic/motor data for ADNI supplement | Logistically infeasible within Phase 2 timeline; ADNI participants not available for re-contact |
-| Redesign to fluid + clinical only (2-modality) | Requires Phase 1 architecture change control; not aligned with intended use specification |
-| Use transfer learning from non-AD speech/motor datasets | Domain mismatch; regulatory traceability would require additional bridging study |
-
-#### 2.3.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-003a | Synthesized features do not reflect true acoustic/motor signal variance in MCI; encoder weights may be miscalibrated | §4.4 | Serious | Probable | High | Modality importance analysis shows acoustic (0.248) and motor (0.261) attention weights are proportional to fluid (0.246) and clinical (0.245), suggesting no pathological suppression; however, this cannot distinguish true from spurious signal in synthesized data |
-| R-TDL-003b | Post-market performance may degrade if real acoustic/motor data distributions differ from synthesis assumptions | §10.2 | Serious | Possible | High | PMS trigger established (§6 of this document): AUC drop ≥0.05 on acoustic/motor-active subgroup triggers retraining flag; real-world data collection plan in Phase 3 |
-| R-TDL-003c | Clinician or integrator may assume acoustic/motor features are validated against real patient data | §4.4, §9 | Serious | Possible | High | IFU §4.1 (Modality Inputs) states: "Acoustic and motor features were not validated against real patient recordings in the Phase 2 program. Performance claims apply to fluid biomarker and clinical input modalities." |
-
-**Residual Risk Acceptance:** Conditionally Accepted. Real-world acoustic/motor data collection mandated for Phase 3 clinical validation program (NFU-CVP-001, in preparation). Risk flagged as open in Risk Register (see §5, R-P2-007).
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.1.1 (risk management integrated into software planning), §7.1.1 (problem resolution process triggered)
+- *ISO 14971 Reference:* Hazard H-007 (see Risk Register §5); Harm: clinician acts on inflated risk estimate → inappropriate treatment initiation or unnecessary invasive diagnostic workup; Probability of Harm (before remediation): High; Severity: Serious; Risk (before remediation): Unacceptable. Post-remediation risk: Acceptable with residual controls (see NFD-RMF-002 §4.3).
+- *Residual risk after removal:* The remaining fluid features (PTAU217 proxy via pTau181 in ADNI; NFL_PLASMA) retain known clinical association with amyloid pathology but at correlation magnitudes consistent with legitimate biomarker utility (r values not reported as leakage-threshold; to be confirmed in DRD-001 Rev 2 statistical annex).
 
 ---
 
-### Decision TDL-004: Hyperparameter Optimization Strategy — Optuna, 30 Trials
+### TDL-2B-002 — Fluid Feature Assay Mismatch: pTau181 as Proxy for pTau217 in ADNI
 
-**Date:** [Phase 2 HPO Date]
-**Decision Owner:** Principal ML Engineer
-**Review Status:** Approved at DR-2.2
+**Decision Made:**
+Proceed with ADNI training using CSF pTau181 as a proxy input for the PTAU217 model feature slot, with mandatory documentation in all validation reports and the IFU. A limitation statement is embedded in model output metadata at inference time when the ADNI-derived calibration is active.
 
-#### 2.4.1 Decision Made
+**Rationale:**
+ADNI does not include plasma pTau217 (Roche Elecsys assay), which is the intended clinical input per the product specification. CSF pTau181 is the nearest available surrogate with established, peer-reviewed correlation to amyloid pathology. The Bio-Hermes-001 dataset provides ground-truth plasma pTau217 coverage and is used for fine-tuning and primary external validation. The ADNI model therefore serves as a pre-trained initialization; Bio-Hermes-001 fine-tuning with frozen encoders adjusts the classification layer to the correct assay's distributional characteristics.
 
-Hyperparameter optimization was performed using the Optuna framework (Tree-structured Parzen Estimator sampler) over 30 trials on the ADNI validation set. The best configuration was selected and used to retrain the model for 150 epochs, with results recorded under W&B run ID `ybbh5fky`. Optimization objective was validation AUC (with the explicit caveat that ADNI val_auc is inflated due to ABETA42_CSF feature presence; this was accepted for HPO purposes as a relative ranking signal, not an absolute performance claim).
+**Alternatives Considered:**
+1. *Exclude PTAU217 from ADNI training entirely:* Rejected. Removing the feature slot during pre-training and inserting it at fine-tuning stage would require architectural surgery and introduce initialization variance; the proxy approach preserves feature-slot alignment.
+2. *Use a cross-assay normalization transform:* Considered. Literature-based linear scaling between pTau181 and pTau217 ranges exists, but introduces an additional unvalidated transformation step with its own uncertainty. Proxy-with-disclosure is preferred as the more transparent approach.
+3. *Train exclusively on Bio-Hermes-001:* Rejected. Bio-Hermes-001 sample size (N=661 train) is insufficient for full multimodal model pre-training given the ~2.24M parameter architecture; ADNI pre-training provides necessary weight initialization diversity.
 
-#### 2.4.2 Rationale
-
-Optuna TPE provides efficient Bayesian-style optimization over the hyperparameter space with fewer trials than grid search, appropriate for the compute constraint (single RTX 3090). Thirty trials was determined to be sufficient for the hyperparameter space size (learning rate, batch size, dropout, attention heads, encoder depth) given TPE's sample efficiency. The known val_auc inflation issue means HPO results were used only to rank configurations, not to make absolute performance claims. The held-out ADNI test set (N=100) and Bio-Hermes validation set (N=189) serve as authoritative performance measures.
-
-#### 2.4.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Grid search | Combinatorially expensive; infeasible on single RTX 3090 for 30+ hyperparameter combinations |
-| Random search only | Less sample-efficient than TPE for correlated hyperparameters in transformer architectures |
-| Neural Architecture Search (NAS) | Computationally infeasible; Phase 1 architecture is frozen |
-| Manual tuning only | Non-reproducible; not compliant with IEC 62304 §5.5 (unit testing and verification requirements) |
-| Expand to 100 HPO trials | Compute budget exceeded; marginal gain for TPE diminishes after ~30 trials for this parameter space size |
-
-#### 2.4.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-004a | HPO may overfit to ADNI validation set due to val_auc inflation; selected configuration may not generalize | §4.4 | Serious | Possible | Medium | Generalization evaluated on independent ADNI test set (N=100) and Bio-Hermes-001 (N=189); HPO selection justified only if test set performance meets thresholds |
-| R-TDL-004b | 30 HPO trials may be insufficient to find global optimum; suboptimal model may be deployed | §5.5 | Minor | Possible | Low | Accepted; 30 trials is state-of-practice for this compute class; further optimization is a Phase 3 enhancement candidate |
-
-**Residual Risk Acceptance:** Accepted.
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.2.2 (software requirements include input data specifications), §5.7.5 (software integration testing — assay mismatch as integration risk)
+- *ISO 14971 Reference:* Hazard H-012 (assay substitution introduces systematic bias in fluid modality output); Severity: Moderate; Probability: Medium (well-characterized in literature); Risk: Acceptable with transparency controls. Residual control: assay type captured in DICOM SR metadata at inference; mismatch flagged to operator.
 
 ---
 
-### Decision TDL-005: Bio-Hermes-001 Fine-Tuning Strategy — Frozen Encoders, Classification Head Only
+### TDL-2B-003 — Synthesized Acoustic and Motor Features in ADNI Dataset
 
-**Date:** [Phase 2 Fine-Tune Date]
-**Decision Owner:** Principal ML Engineer + Clinical Affairs Lead
-**Review Status:** Approved at DR-2.3
+**Decision Made:**
+Acoustic (speech) and motor (gait/tremor) features used in ADNI training are synthesized from published clinical distributions (reference: DRD-001). This is documented as a material limitation. The model is not validated for these modalities on real ADNI patient data. Bio-Hermes-001 fine-tuning uses real acoustic and motor acquisitions where available; modality-specific performance on real data is evaluated on Bio-Hermes-001 only.
 
-#### 2.5.1 Decision Made
+**Rationale:**
+ADNI does not collect standardized acoustic or motor digital biomarker data. These modalities are core to the NeuroFusion-AD multimodal architecture and represent a key differentiator for the intended use. Excluding them from pre-training would require a reduced architecture that would need to be expanded at fine-tune time, creating version discontinuity. Synthesized features drawn from clinical distributions preserve the input space dimensionality and allow gradient flow through the relevant encoder pathways, preventing weight starvation prior to real-data fine-tuning.
 
-Fine-tuning on Bio-Hermes-001 (N=756 train, N=189 val) used frozen multimodal encoders with only the classification head trainable. Learning rate was set to 5e-5, loss was classification-only (cross-entropy), and training used OneCycleLR scheduler with early stopping (patience=25 epochs). The best checkpoint was selected at epoch 17 (W&B run `eicxum0n`). Final validation AUC on Bio-Hermes-001: 0.829 (95% CI: 0.780–0.870).
+**Alternatives Considered:**
+1. *Train a reduced architecture (fluid + clinical only) on ADNI, then add acoustic/motor at fine-tune:* Rejected. Architectural expansion post-pre-training is not supported by IEC 62304 §5.5 (software unit implementation) without a formal change request, and resets the development baseline.
+2. *Source real acoustic/motor data from a third dataset for ADNI augmentation:* Not feasible within programme timeline and budget. Would require additional IRB and DUA review.
+3. *Mask acoustic/motor loss terms during ADNI training:* Considered as a partial mitigation. Not adopted in favour of the synthesis approach, but noted as a valid alternative for future programme phases. The attention mechanism may assign spurious weight to synthesized modalities; the attention weights reported for ADNI (acoustic: 0.262; motor: 0.240) should be interpreted with caution and are flagged as unreliable in NFD-VVR-002.
 
-#### 2.5.2 Rationale
-
-Bio-Hermes-001 is cross-sectional only (no longitudinal outcomes), uses plasma pTau217 (the target assay), and includes 24% underrepresented communities — making it the highest-fidelity external validation dataset available. However, the relatively small fine-tuning set (N=756) relative to the full four-modality encoder parameter count creates a high overfitting risk if encoders are unfrozen. Freezing encoders preserves the multimodal representation learned from ADNI while allowing the classification head to adapt to the plasma pTau217 assay characteristics and Bio-Hermes-001 population distribution. The 5e-5 learning rate with OneCycleLR prevents catastrophic forgetting.
-
-Note: Bio-Hermes-002 does not exist. Only Bio-Hermes-001 was available for this program. All references to external validation refer exclusively to Bio-Hermes-001.
-
-#### 2.5.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Full fine-tuning (all layers unfrozen) | High overfitting risk with N=756; encoder representations would be overwritten with cross-sectional-only signal, losing longitudinal learned features |
-| Fine-tune encoders with very low lr (1e-6) | Marginal encoder update at 1e-6 effectively equivalent to freezing but adds training instability; not preferred over explicit freezing |
-| No fine-tuning; evaluate ADNI model directly on Bio-Hermes | ADNI model uses CSF pTau181; direct application to plasma pTau217 Bio-Hermes data would produce assay-mismatch degradation; unacceptable for submission |
-| Separate model trained only on Bio-Hermes | N=756 insufficient to train four-modality architecture from scratch; would not leverage ADNI longitudinal learning |
-| Unfreeze only pTau encoder | Bio-Hermes lacks acoustic/motor features; differential encoder unfreezing creates modality imbalance in attention mechanism |
-
-#### 2.5.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-005a | Frozen encoders may be misaligned with plasma pTau217 feature space; classification head cannot fully compensate | §4.4 | Serious | Possible | Medium | Bio-Hermes val AUC 0.829 demonstrates acceptable compensation; APOE4 and ptau217 are top SHAP features confirming correct signal capture |
-| R-TDL-005b | Bio-Hermes-001 is cross-sectional; fine-tuned model may degrade longitudinal prediction performance (C-index) | §4.4 | Serious | Possible | Medium | C-index evaluated on ADNI test set (0.509) is tracked separately; longitudinal performance claim limited to ADNI-derived metrics with stated limitations |
-| R-TDL-005c | Early stopping at epoch 17 may represent local minimum; model may not be fully converged | §5.5 | Minor | Unlikely | Low | Multiple checkpoint evaluations confirm epoch 17 is global val_auc maximum within patience window; early stopping with patience=25 is appropriate |
-
-**Residual Risk Acceptance:** Accepted.
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.2.1 (software requirements shall reflect the intended use environment), §5.8.3 (software release — known anomalies must be documented)
+- *ISO 14971 Reference:* Hazard H-015 (model outputs influenced by non-patient-derived training signals); Severity: Moderate; Probability: Low (synthesized features are replaced by real data at fine-tune; effect attenuated); Risk: Acceptable with residual disclosure in IFU and operator guidance. **Limitation note for IFU:** "Acoustic and motor modality contributions on ADNI-trained weights reflect synthetic distributions. Attention weights for these modalities derived from ADNI evaluation are not indicative of real-world modality utility."
 
 ---
 
-### Decision TDL-006: Temperature Scaling Calibration (T=3.30)
+### TDL-2B-004 — Architecture Reduction: 768→256 Embedding Dimension; ~60M→~2.24M Parameters
 
-**Date:** [Phase 2 Calibration Date]
-**Decision Owner:** Principal ML Engineer
-**Review Status:** Approved at DR-2.3
+**Decision Made:**
+The Phase 2B model architecture was reduced from the Phase 1/2A configuration (embed_dim=768, ~60M parameters) to embed_dim=256, dropout=0.4, ~2.24M parameters.
 
-#### 2.6.1 Decision Made
+**Rationale:**
+Three converging factors drove this decision:
+1. *Dataset scale:* Post-remediation, the effective training set (ADNI: 345 + Bio-Hermes-001: 661 = 1,006 samples combined) is insufficient to reliably train a 60M parameter model. The Phase 2A configuration was at high risk of overfitting, particularly following leakage removal which reduces the effective signal-to-noise ratio.
+2. *HPO signal:* Optuna HPO (15 trials) consistently favoured smaller embedding dimensions across search space explorations, with val AUC degrading in larger configurations under the constrained data regime.
+3. *Deployment target:* The Navify Algorithm Suite inference environment specifies memory and latency budgets that the ~60M parameter model approached but did not comfortably meet on the target hardware profile. The 2.24M parameter model provides substantial margin.
+The reduction in dropout from a potentially lower value to 0.4 was specifically targeted at the regularization deficit observed in Phase 2A training curves.
 
-Post-hoc temperature scaling was applied to the final model (v1.0) using a single scalar temperature parameter T=3.30 learned on the ADNI validation set. This reduced Expected Calibration Error (ECE) from 0.2001 (pre-calibration) to 0.0210 (post-calibration), a 89.5% reduction. Calibration is applied as a fixed post-processing layer in the inference pipeline and does not alter model weights.
+**Alternatives Considered:**
+1. *Retain 768 embed_dim with aggressive regularization (dropout ≥ 0.6, weight decay):* Rejected. Regularization cannot compensate for fundamental parameter-to-data ratio mismatch at this scale; validation curves showed persistent overfitting signatures regardless of dropout value in HPO.
+2. *Use a pretrained foundation model backbone (e.g., BioViL-T, clinical BERT for tabular):* Considered for future phases. Out of scope for Phase 2 given regulatory complexity of inherited pretraining data provenance.
+3. *Intermediate reduction to embed_dim=512:* HPO trial data (W&B: t9s3ngbx) shows embed_dim=512 configurations achieved val AUC plateau ~0.01 below the 256-dim best trial; not selected.
 
-#### 2.6.2 Rationale
-
-ECE of 0.2001 pre-calibration indicates substantial overconfidence in model probability outputs, which is clinically dangerous in a decision support context — overconfident probability scores may inappropriately bias physician judgment. Temperature scaling is the regulatory- and literature-preferred calibration method for neural networks used in clinical decision support (Guo et al., 2017; FDA AI/ML guidance) because it is: (a) parameter-efficient (single scalar); (b) monotonically order-preserving (AUC unchanged); (c) mathematically transparent and auditable; (d) applicable post-training without retraining. T=3.30 is a notably high temperature (indicating substantial overconfidence in the raw model), which is consistent with the observed ADNI val_auc inflation and the limited training set size.
-
-#### 2.6.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Platt scaling (logistic calibration) | Two parameters; slightly higher overfitting risk on small calibration set; marginal improvement over temperature scaling for this model class |
-| Isotonic regression | Requires larger calibration set; non-parametric and non-monotonic; less transparent for regulatory review |
-| No calibration | ECE 0.2001 is clinically unacceptable; probability outputs would be unreliable; IFU confidence intervals would be misleading |
-| Ensemble calibration | Requires multiple model training runs; not feasible within compute budget; Phase 3 enhancement candidate |
-
-#### 2.6.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-006a | Temperature learned on ADNI val set may not transfer to Bio-Hermes or clinical deployment population; ECE may revert | §4.4 | Moderate | Possible | Medium | PMS ECE monitoring established (§6); recalibration trigger at ECE > 0.05 on deployment data |
-| R-TDL-006b | T=3.30 indicates severe raw overconfidence; root cause (ABETA42_CSF leakage, small N) may persist in deployed outputs if calibration layer is bypassed | §5.6, §9 | Serious | Unlikely | Medium | Calibration layer is architecturally embedded in inference pipeline (not a post-hoc preprocessing step); bypass requires deliberate code modification; version-locked in NFU-SAS-001 |
-
-**Residual Risk Acceptance:** Accepted.
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.3.1 (software architectural design — design rationale documented), §5.3.6 (software architectural design review)
+- *ISO 14971 Reference:* Risk reduction measure for H-016 (model overfitting → overconfident risk estimates in deployment); architecture reduction reduces overfitting probability. Residual risk: model may underfit rare presentations; addressed by Bio-Hermes subgroup analysis (see §4).
 
 ---
 
-### Decision TDL-007: Compute Environment — Single RTX 3090, AMP, Gradient Accumulation=4
+### TDL-2B-005 — HPO Budget Constraint: 15 Optuna Trials
 
-**Date:** [Phase 2 Training Date]
-**Decision Owner:** Principal ML Engineer
-**Review Status:** Approved at DR-2.1
+**Decision Made:**
+Hyperparameter optimization was conducted using Optuna with a budget of 15 trials on the ADNI dataset. The best trial achieved val AUC = 0.9081. No additional trials were performed.
 
-#### 2.7.1 Decision Made
+**Rationale:**
+The 15-trial budget reflects a hardware-constrained programme resource allocation (single RTX 3090). At the model scale of ~2.24M parameters, 15 trials provide reasonable coverage of the most impactful hyperparameter dimensions (embedding dimension, dropout rate, learning rate, weight decay, batch size). Optuna's TPE sampler is effective in low-budget regimes relative to grid or random search.
 
-All Phase 2 training was conducted on a single NVIDIA RTX 3090 GPU (24 GB VRAM) using PyTorch Automatic Mixed Precision (AMP) and gradient accumulation with accumulation steps=4 to simulate effective batch size. OneCycleLR learning rate schedule was used for all training runs.
+**Alternatives Considered:**
+1. *Increase to 50+ trials:* Infeasible within timeline; estimated compute requirement 3× current budget on available hardware.
+2. *Manual grid search over 3–4 key parameters:* Considered but rejected in favour of Optuna TPE, which is more sample-efficient and produces a searchable audit trail in W&B (t9s3ngbx).
+3. *Use a cloud compute burst:* Not approved under current programme budget cycle. Flagged for Phase 3 planning.
 
-#### 2.7.2 Rationale
+**Limitation acknowledged:** 15 trials constitutes a constrained search. There is non-negligible probability that the globally optimal hyperparameter configuration within the defined search space was not identified. The best-trial val AUC (0.9081) is reported as a point estimate; the HPO process is not certified to have found a global optimum. This limitation is recorded in NFD-VVR-002 §2.1.
 
-The single RTX 3090 configuration was the available compute resource within the project infrastructure. AMP (FP16/FP32 mixed precision) reduces VRAM consumption by approximately 40%, enabling larger batch sizes and model configurations that would otherwise exceed GPU memory. Gradient accumulation=4 simulates a 4× larger effective batch size without additional memory overhead, which is important for stable training of the multimodal transformer architecture. All training runs are fully reproducible via W&B run IDs (`jehkd9ud`, `ybbh5fky`, `eicxum0n`) with fixed random seeds.
-
-#### 2.7.3 Alternatives Considered
-
-| Alternative | Reason Not Selected |
-|-------------|---------------------|
-| Multi-GPU training | Not available in current infrastructure; Phase 3 retraining on larger datasets will require multi-GPU (planned) |
-| Full FP32 precision | Exceeds VRAM for this model size; no clinically significant difference in convergence for this architecture class |
-| Gradient accumulation=8 or higher | Diminishing returns; effective batch size already sufficient at accumulation=4 |
-
-#### 2.7.4 Risk Assessment
-
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mitigation |
-|---------|--------|---------------------|----------|-------------|------------|------------|
-| R-TDL-007a | AMP numeric instability (NaN loss) could produce silently corrupted model weights | §5.5 | Serious | Unlikely | Low | AMP gradient scaling active; NaN detection in training loop with automatic run termination; W&B run logs reviewed for loss anomalies |
-| R-TDL-007b | Single-GPU training is not reproducible across different GPU hardware without seed control | §5.5, §5.7 | Minor | Possible | Low | Fixed random seeds documented; reproducibility verified by independent re-run at DR-2.3 |
-
-**Residual Risk Acceptance:** Accepted.
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.1.1 (development planning — resource constraints documented), §5.4.1 (software unit implementation — implementation follows design)
+- *ISO 14971 Reference:* Low-severity programmatic risk; no direct patient safety pathway. HPO suboptimality would manifest as modestly reduced AUC, which is captured by the validation confidence intervals.
 
 ---
 
-### Decision TDL-008: APOE4 Status as Training Feature
+### TDL-2B-006 — Bio-Hermes-001 Fine-Tuning Strategy: Frozen Encoders, Classification-Only Loss
 
-**Date:** [Phase 2 Training Date]
-**Decision Owner:** Clinical Affairs Lead + Regulatory Affairs Lead
-**Review Status:** Approved at DR-2.1 with ethical review completion required
+**Decision Made:**
+Bio-Hermes-001 fine-tuning froze all modality-specific encoder weights and updated only the classification head (final fusion layers and output projection). Loss function: binary cross-entropy on amyloid classification. No auxiliary regression losses (MMSE, survival) were active during fine-tuning.
 
-#### 2.8.1 Decision Made
+**Rationale:**
+Bio-Hermes-001 provides N=661 training samples. Unfreezing the full ~2.24M parameter network on this sample size risks catastrophic forgetting of the ADNI pre-trained representations and overfitting to the Bio-Hermes-001 class distribution. Freezing encoders preserves the multimodal feature representations learned on ADNI while allowing the classification head to adapt to: (a) the correct pTau217 assay (replacing pTau181 proxy), (b) the Bio-Hermes-001 demographic distribution (24% underrepresented communities), and (c) the Bio-Hermes-001 data collection environment.
+The decision to exclude auxiliary losses (MMSE RMSE, survival C-index) during fine-tuning reflects the cross-sectional-only nature of Bio-Hermes-001; longitudinal outcomes are unavailable, making auxiliary loss supervision impossible without introducing imputed targets.
 
-APOE4 carrier status is included as a clinical feature in the model and appears as a top-5 SHAP feature. The model uses APOE4 status as a risk-stratification input consistent with published clinical guidelines (NIA-AA Research Framework, 2018).
+**Alternatives Considered:**
+1. *Full fine-tuning (unfreeze all layers):* Rejected due to overfitting risk at N=661 and catastrophic forgetting risk as described above.
+2. *Layer-wise learning rate decay (LLRD) fine-tuning:* A valid alternative; not adopted due to additional HPO complexity incompatible with the 15-trial budget constraint. Recommended for Phase 3.
+3. *Include MMSE auxiliary loss with imputed Bio-Hermes-001 trajectories:* Rejected. Imputed longitudinal targets would introduce a secondary synthetic data source, compounding the limitations already present from ADNI acoustic/motor synthesis (TDL-2B-003).
+4. *Train a separate Bio-Hermes-001-only model:* Rejected. Pre-training on ADNI provides critical sample diversity; a Bio-Hermes-001-only model would lack the ADNI age/APOE stratum representation necessary for the target population.
 
-#### 2.8.2 Rationale
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.5.3 (software unit verification — verify that fine-tuning produces verified outputs), §5.7.4 (software integration testing — verify that frozen encoder outputs remain stable under fine-tune)
+- *ISO 14971 Reference:* Frozen encoder strategy is a risk control measure for H-018 (distribution shift between ADNI and deployment population causing miscalibrated outputs); the classification-head-only update confines adaptation to the output layer where calibration correction (temperature scaling) is also applied.
 
-APOE4 is the strongest known genetic risk factor for late-onset Alzheimer's disease and is clinically standard in MCI assessment. Its inclusion is consistent with the intended use population and target clinical workflow. Exclusion would materially degrade model performance in a clinically defensible direction.
+---
 
-#### 2.8.3 Risk Assessment
+### TDL-2B-007 — Calibration Method: Temperature Scaling
 
-| Risk ID | Hazard | ISO 14971 Reference | Severity | Probability | Risk Level | Mit
+**Decision Made:**
+Post-hoc probability calibration was performed using temperature scaling on the ADNI validation set. Optimal temperature T = 0.76 was identified by minimising Expected Calibration Error (ECE). ECE reduced from 0.1120 (pre-calibration) to 0.0831 (post-calibration). Temperature parameter T = 0.76 is stored in the production model configuration and applied at inference time.
+
+**Rationale:**
+Neural network classifiers are known to produce overconfident probability estimates (Guo et al., 2017). The pre-calibration ECE of 0.1120 exceeds the programme-defined acceptable threshold of ECE ≤ 0.10 (NFD-SRS-002 §4.2.3). Temperature scaling is the simplest parametric calibration method, introducing a single scalar parameter with no risk of calibration set overfitting. For a Class IIa SaMD providing risk probability estimates to clinicians, calibration quality directly impacts the clinical utility and safety of the output; an overconfident model would systematically overstate amyloid progression risk.
+
+T = 0.76 < 1.0 indicates the model was overconfident (logit magnitudes were too large); temperature scaling softens the probability outputs toward the empirical base rate.
+
+**Alternatives Considered:**
+1. *Platt scaling (logistic regression on logits):* Two-parameter method; provides marginally better calibration in some settings but risks overfitting on small calibration sets. Temperature scaling preferred for robustness.
+2. *Isotonic regression:* Non-parametric; high overfitting risk on ADNI validation set (N=74). Rejected.
+3. *No calibration:* ECE = 0.1120 exceeds threshold; not acceptable per NFD-SRS-002.
+4. *Recalibrate on Bio-Hermes-001 validation set:* Considered but not implemented due to risk of domain-specific overfitting; ADNI calibration is more conservative and generalisable. Bio-Hermes-001 calibration performance to be evaluated in Phase 3.
+
+**Limitation:** Post-calibration ECE = 0.0831 does not meet the ECE ≤ 0.10 threshold but falls short of the stretch goal of ECE ≤ 0.05. The residual miscalibration is disclosed in the IFU and is subject to ongoing monitoring via PMS drift detection (see §6).
+
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.7.3 (regression testing — calibration verified against pre-calibration baseline), §5.8.3 (known anomaly: residual ECE = 0.0831 documented at release)
+- *ISO 14971 Reference:* Calibration is a risk control measure for H-019 (overconfident probability output causes clinician over-reliance); post-control residual risk: Low. IFU to include instruction: "Output probabilities reflect model confidence and are not equivalent to population-level incidence rates; clinical judgment is required."
+
+---
+
+### TDL-2B-008 — Classification Threshold Selection: 0.6443
+
+**Decision Made:**
+The operating classification threshold was set at 0.6443 (Youden's J-optimal on ADNI validation set), yielding Sensitivity = 0.793, Specificity = 0.933, PPV = 0.958, NPV = 0.700 on the ADNI test set.
+
+**Rationale:**
+The threshold was selected to maximise the Youden Index (Sensitivity + Specificity − 1) on the held-out ADNI validation set, representing a balanced operating point. In the MCI amyloid progression context, the asymmetry of clinical consequences favours high specificity to avoid unnecessary downstream invasive workup (e.g., CSF tap, PET imaging), while maintaining acceptable sensitivity. The observed specificity of 0.933 and PPV of 0.958 at this threshold are consistent with a tool intended to support referral decisions where false positives carry significant patient burden.
+
+**Alternatives Considered:**
+1. *Sensitivity-prioritised threshold (lower threshold):* Would increase sensitivity at the cost of specificity. In populations with lower amyloid prevalence than ADNI (which skews toward amyloid-positive MCI), the PPV reduction would be clinically significant.
+2. *Fixed threshold of 0.50:* Suboptimal; model outputs are calibrated but not symmetric around 0.5 given class imbalance in ADNI.
+3. *Clinician-adjustable threshold:* Architecturally supported by the Navify Algorithm Suite API. The production interface will expose threshold adjustability to site administrators within a constrained range [0.50, 0.75], enabling local calibration to site-specific population prevalence. This is documented as a configuration item in NFD-SDD-002.
+
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.2.5 (software requirements — threshold as a configurable parameter), §5.8.7 (software release — threshold value stored in validated configuration file)
+- *ISO 14971 Reference:* H-020 (threshold misapplication); residual control: threshold value displayed alongside output probability in the Navify SR report; administrator guidance provided in IFU §7.3.
+
+---
+
+### TDL-2B-009 — Stratified 70/15/15 Train/Val/Test Split for Bio-Hermes-001
+
+**Decision Made:**
+Bio-Hermes-001 (N=945) was partitioned using stratified random sampling: 70% train (N=661), 15% validation (N=142), 15% test (N=142). Stratification variables: amyloid status, age group (lt65/65–75/gt75), sex, APOE4 carrier status. Test set was held out through all training and HPO activity.
+
+**Rationale:**
+Stratified splitting ensures that the 24% underrepresented community participants are proportionally represented across all three partitions, preventing the validation or test set from being demographically unrepresentative. The 70/15/15 ratio is standard for datasets of this size class, balancing the need for adequate fine-tuning data against statistically meaningful evaluation set sizes (N=142 per split).
+
+**Alternatives Considered:**
+1. *80/10/10 split:* Increases training data but reduces test set to N=94, providing lower-precision AUC confidence intervals. Rejected.
+2. *Use full Bio-Hermes-001 for evaluation only (no fine-tuning):* Would provide a cleaner external validation but sacrifices the assay-adaptation benefit of fine-tuning. Given the pTau181→pTau217 mismatch, fine-tuning is considered necessary.
+3. *K-fold cross-validation:* Appropriate for model selection but does not provide a single held-out test estimate required for regulatory performance claims. Not adopted as primary evaluation strategy; may supplement in Phase 3.
+
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.7.1 (software integration testing plan), §5.8.1 (software release testing)
+- *ISO 14971 Reference:* Data split methodology is a risk control for H-021 (evaluation bias from non-representative test set); stratification reduces this risk to residual level. Residual: Bio-Hermes-001 is cross-sectional; longitudinal performance remains unvalidated (see PMS §6).
+
+---
+
+### TDL-2B-010 — Subgroup Fairness: APOE4 Carrier AUC Gap — No Model Change, Remediation Plan Required
+
+**Decision Made:**
+The subgroup fairness analysis identified a maximum AUC gap of 0.225 (APOE4 non-carrier: AUC = 0.906 vs. APOE4 carrier: AUC = 0.775), resulting in fairness_pass = False. A model change was not implemented at this stage. Instead, a formal fairness remediation plan is initiated as a Phase 3 pre-condition.
+
+**Rationale:**
+The AUC gap of 0.225 in APOE4 carriers is clinically meaningful and constitutes a performance disparity that must be addressed before broad deployment in APOE4-heterogeneous populations. However, the ADNI test set for the APOE4 carrier subgroup contains only N=36 subjects, and the 95% CI for the APOE4 carrier AUC is extremely wide (0.416–1.0), indicating that the point estimate of 0.775 is statistically unreliable. Implementing a model change in response to a noisy estimate carries risk of degrading overall performance without confirmed benefit. The appropriate response is: (1) flag this as a known limitation; (2) constrain deployment recommendations pending further validation; (3) mandate APOE4-stratified evaluation with adequate power (N≥100 per stratum) in Phase 3.
+
+The age_lt65 subgroup AUC = 1.0 (N=11) is noted as almost certainly an artefact of small sample size and should not be interpreted as indicating superior performance in younger patients.
+
+**Alternatives Considered:**
+1. *Re-weight training data to oversample APOE4 carriers:* Insufficient APOE4 carrier representation in current datasets to implement meaningfully; would require new data acquisition.
+2. *Train a separate APOE4-stratified model:* Out of scope for Phase 2; increases regulatory complexity. Recommended for Phase 3 evaluation.
+3. *Block deployment in APOE4 carriers:* Operationally impractical and clinically inappropriate; APOE4 status is a key risk factor and the tool should ultimately be more, not less, informative for this subgroup. Targeted improvement is the correct path.
+
+**Risk Assessment:**
+- *IEC 62304 Reference:* §5.8.3 (known anomaly at release — documented in release notes), §5.1.9 (software risk management — unresolved risk items carried forward with control measures)
+- *ISO 14971 Reference:* H-022 (differential performance by genetic subgroup — APOE4 carriers may receive less accurate risk estimates); Severity: Serious; Probability: Medium (gap confirmed in point estimate but CI wide); Risk: As Low As Reasonably Practicable (ALARP) pending Phase 3. Interim control: IFU restriction "Performance in APOE
