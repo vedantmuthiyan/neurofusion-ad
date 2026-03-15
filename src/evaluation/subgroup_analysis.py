@@ -170,8 +170,26 @@ class SubgroupAnalyzer:
             y_true_sub = amyloid_true[mask]
             y_prob_sub = probs[mask]
 
+            # Filter NaN labels before AUC computation (ADNI has ~36% NaN amyloid labels)
+            _valid = ~np.isnan(y_true_sub)
+            y_true_sub = y_true_sub[_valid]
+            y_prob_sub = y_prob_sub[_valid]
+
+            if len(y_true_sub) < MIN_SUBGROUP_SIZE:
+                log.warning(
+                    "SubgroupAnalyzer: subgroup too small after NaN filter",
+                    subgroup=name,
+                    n_valid=int(len(y_true_sub)),
+                )
+                results[name] = {
+                    "auc": float("nan"),
+                    "n": n_sub,
+                    "ci": (float("nan"), float("nan")),
+                }
+                continue
+
             # Check that we have both classes in subgroup
-            if len(np.unique(y_true_sub[~np.isnan(y_true_sub)])) < 2:
+            if len(np.unique(y_true_sub)) < 2:
                 log.warning(
                     "SubgroupAnalyzer: subgroup has only one class",
                     subgroup=name,

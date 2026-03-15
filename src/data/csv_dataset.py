@@ -381,12 +381,20 @@ class NeuroFusionCSVDataset(Dataset):
         edu_years = float(row.get("EDUCATION_YEARS", 0.0))
         mmse_base = float(row.get("MMSE_BASELINE", 0.0))
         # Positions 5-10: no APOE4, no TAU_CSF, BH plasma Abeta42/40, derived ratio, 0
-        abeta42_plasma = float(row.get("ABETA42_PLASMA", 0.0))
-        abeta40_plasma = float(row.get("ABETA40_PLASMA", 0.0)) if "ABETA40_PLASMA" in row.index else 0.0
-        ptau217 = float(row.get("PTAU217", 0.0))
-        abeta4240_ratio = float(row.get("ABETA4240_RATIO", 0.0))
+        # Phase 2B: guard against NaN in ABETA42_PLASMA/ABETA40_PLASMA (4% missing in BH)
+        def _sfloat(v, d=0.0):
+            """safe float: NaN → default."""
+            try:
+                x = float(v)
+                return d if x != x else x  # x != x is True only for NaN
+            except (TypeError, ValueError):
+                return d
+        abeta42_plasma = _sfloat(row.get("ABETA42_PLASMA"))
+        abeta40_plasma = _sfloat(row.get("ABETA40_PLASMA"))
+        ptau217 = _sfloat(row.get("PTAU217"))
+        abeta4240_ratio = _sfloat(row.get("ABETA4240_RATIO"))
         plasma_ratio = ptau217 / (abeta4240_ratio + 1e-6)
-        clinical = [age, sex_code, edu_years, mmse_base, 0.0, 0.0, abeta42_plasma, abeta40_plasma, plasma_ratio, 0.0]
+        clinical = [_sfloat(age), _sfloat(sex_code), _sfloat(edu_years), _sfloat(mmse_base), 0.0, 0.0, abeta42_plasma, abeta40_plasma, plasma_ratio, 0.0]
 
         # Labels: only AMYLOID_POSITIVE is valid for BH
         amyloid_label = float(row["AMYLOID_POSITIVE"]) if "AMYLOID_POSITIVE" in row.index and not pd.isna(row["AMYLOID_POSITIVE"]) else float("nan")

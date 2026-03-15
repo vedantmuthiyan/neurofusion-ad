@@ -290,6 +290,14 @@ class ModelEvaluator:
         Returns:
             Tuple of (auc_value, (lower_ci, upper_ci)).
         """
+        # Filter NaN labels (ADNI has ~36% NaN amyloid labels)
+        import numpy as _np
+        _valid = ~_np.isnan(y_true)
+        if _valid.sum() < 5 or len(_np.unique(y_true[_valid])) < 2:
+            log.warning("Insufficient valid labels for AUC", n_valid=int(_valid.sum()))
+            return float("nan"), (float("nan"), float("nan"))
+        y_true = y_true[_valid]
+        y_prob = y_prob[_valid]
         try:
             auc = float(roc_auc_score(y_true, y_prob))
         except Exception as exc:

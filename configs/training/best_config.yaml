@@ -1,0 +1,28 @@
+model:
+  embed_dim: 256
+  num_heads: 4
+  gnn_layers: 2
+  dropout: 0.3082106291191777
+  graph_threshold: 0.552912157215725
+training:
+  n_epochs: 150
+  batch_size: 32
+  gradient_accumulation_steps: 2
+  learning_rate: 0.0004288081595190247
+  weight_decay: 0.000641016068322043
+  early_stopping_patience: 25
+  onecycle_pct_start: 0.22553002316840542
+  augmentation_noise_std: 0.01
+loss_weights:
+  cls: 1.679261784642228
+  reg: 0.11373331941130621
+  surv: 0.6271981996153196
+data:
+  adni_train: data/processed/adni/adni_train.csv
+  adni_val: data/processed/adni/adni_val.csv
+  scaler_path: data/processed/adni/scaler.pkl
+hpo_metadata:
+  best_trial_number: 3
+  best_val_auc: 0.9080882352941175
+  n_trials_completed: 15
+  study_name: neurofusion_phase2b_hpo

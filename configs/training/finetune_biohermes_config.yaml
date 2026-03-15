@@ -53,3 +53,11 @@ wandb:
 checkpoints:
   dir: models/checkpoints/biohermes_finetuned
   save_every_n_epochs: 5
+
+# Phase 2B: must match the architecture of the pre-trained checkpoint
+model:
+  embed_dim: 256
+  num_heads: 4
+  gnn_layers: 2
+  dropout: 0.3082106291191777   # from best_config.yaml (HPO trial 3)
+  graph_threshold: 0.552912157215725

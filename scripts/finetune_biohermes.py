@@ -231,11 +231,13 @@ def main() -> int:
     pretrained_path = cfg.get("pretrained_checkpoint", "models/final/best_model.pth")
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # Phase 2B: read architecture from config (must match pretrained checkpoint)
+    model_cfg = cfg.get("model", {})
     model = NeuroFusionAD(
-        embed_dim=768,
-        num_heads=8,
-        graph_threshold=0.7,
-        dropout=0.1,
+        embed_dim=int(model_cfg.get("embed_dim", 768)),
+        num_heads=int(model_cfg.get("num_heads", 8)),
+        graph_threshold=float(model_cfg.get("graph_threshold", 0.7)),
+        dropout=float(model_cfg.get("dropout", 0.1)),
     )
 
     if not Path(pretrained_path).exists():
