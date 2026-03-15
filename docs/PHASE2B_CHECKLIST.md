@@ -1,6 +1,6 @@
 # Phase 2B Exit Checklist — Model Remediation
 
-**Status**: COMPLETE — awaiting human gate review
+**Status**: COMPLETE ✓ — awaiting human gate review
 **Purpose**: Fix Phase 2 failures before Phase 3 begins
 **Budget**: ~$12 remaining — all agents use claude-sonnet-4-6 only
 
@@ -47,11 +47,11 @@
 ## Documentation (Batch API — ~$2-3)
 
 - [x] `python scripts/batch/generate_phase2_docs.py --submit`
-  Batch ID: msgbatch_01G4xrs23ARV9Qg7oCHV4nen (in progress)
-- [ ] Batch retrieved — 5 documents updated with new metrics
-- [ ] CVR_v1.0_part1.md and part2.md — no placeholder text, updated AUC values
-- [ ] fairness_report.md — APOE4 gap documented with new values
-- [ ] model_card.md — caveats include leakage fix explanation
+  Batch ID: msgbatch_01G4xrs23ARV9Qg7oCHV4nen (5/5 succeeded)
+- [x] Batch retrieved — 5 documents updated with Phase 2B metrics
+- [x] CVR_v1.0_part1.md and part2.md — AUC 0.8897/0.9071, leakage fix documented
+- [x] fairness_report.md — APOE4 gap 0.131 documented
+- [x] model_card.md — leakage fix, Phase 2B architecture in caveats
 
 ## Final Gate
 
