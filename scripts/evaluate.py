@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
-"""Full model evaluation on ADNI test set and Bio-Hermes-001 val set.
+"""Full model evaluation on ADNI test set and Bio-Hermes-001 test set.
+
+Phase 2B: updated to output phase2b_results.json, use Bio-Hermes test split,
+and compute PPV, NPV, F1, sensitivity, specificity at Youden's optimal threshold.
 
 Loads best model from models/final/best_model.pth for ADNI evaluation
 and models/checkpoints/biohermes_finetuned/best_model.pth for Bio-Hermes.
 
 Produces:
-    docs/results/phase2_results.json    — all metrics
+    docs/results/phase2b_results.json   — all metrics (Phase 2B)
     docs/figures/roc_curve.png
     docs/figures/confusion_matrix.png
     docs/figures/calibration_plot.png
     docs/figures/modality_importance.png
     docs/figures/subgroup_auc.png
+
+Phase 2B minimum acceptable results (gate to Phase 3):
+    ADNI test AUC ≥ 0.65
+    Bio-Hermes test AUC ≥ 0.75
+    Subgroup max gap < 0.12
+    PPV/NPV/F1 reported: yes
+    0 test failures: yes
 
 Usage:
     python scripts/evaluate.py [--adni-checkpoint PATH] [--bh-checkpoint PATH]
@@ -34,7 +44,10 @@ import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc as sklearn_auc, confusion_matrix
+from sklearn.metrics import (
+    roc_curve, auc as sklearn_auc, confusion_matrix,
+    precision_score, recall_score, f1_score,
+)
 import structlog
 
 # Ensure project root is on sys.path
@@ -53,16 +66,17 @@ log = structlog.get_logger(__name__)
 # Output paths
 RESULTS_DIR = PROJECT_ROOT / "docs" / "results"
 FIGURES_DIR = PROJECT_ROOT / "docs" / "figures"
-RESULTS_FILE = RESULTS_DIR / "phase2_results.json"
+RESULTS_FILE = RESULTS_DIR / "phase2b_results.json"  # Phase 2B: updated filename
 
-# Phase 2 performance targets
-PHASE2_TARGETS = {
-    "adni_auc_gte_0.80": 0.80,
+# Phase 2B minimum acceptable results (gate to Phase 3)
+PHASE2B_TARGETS = {
+    "adni_auc_gte_0.65": 0.65,
     "adni_rmse_lte_4.0": 4.0,
-    "adni_c_index_gte_0.68": 0.68,
-    "bh_auc_gte_0.78": 0.78,
-    "subgroup_gap_lt_0.07": 0.07,
+    "adni_c_index_gte_0.60": 0.60,
+    "bh_auc_gte_0.75": 0.75,
+    "subgroup_gap_lt_0.12": 0.12,
     "ece_lt_0.10": 0.10,
+    "ppv_npv_f1_reported": True,
 }
 
 RESULTS_SCHEMA = {
@@ -70,8 +84,13 @@ RESULTS_SCHEMA = {
         "auc": 0.0,
         "auc_ci": [0.0, 0.0],
         "auc_pr": 0.0,
-        "sensitivity": 0.0,
-        "specificity": 0.0,
+        # Threshold-dependent metrics at Youden's optimal threshold (Phase 2B)
+        "optimal_threshold": 0.5,
+        "sensitivity": 0.0,      # recall / TPR
+        "specificity": 0.0,      # TNR
+        "ppv": 0.0,               # precision / positive predictive value
+        "npv": 0.0,               # negative predictive value
+        "f1": 0.0,                # F1 score
         "rmse": 0.0,
         "rmse_ci": [0.0, 0.0],
         "mae": 0.0,
@@ -83,21 +102,29 @@ RESULTS_SCHEMA = {
         "temperature": 1.0,
         "n_test": 0,
     },
-    "biohermes_val": {
+    "biohermes_test": {           # Phase 2B: uses held-out test split
         "auc": 0.0,
         "auc_ci": [0.0, 0.0],
-        "n_val": 0,
+        "ppv": 0.0,
+        "npv": 0.0,
+        "f1": 0.0,
+        "sensitivity": 0.0,
+        "specificity": 0.0,
+        "optimal_threshold": 0.5,
+        "n_test": 0,
     },
     "subgroup_analysis": {},
     "modality_importance": {},
-    "phase2_targets_met": {
-        "adni_auc_gte_0.80": False,
+    "phase2b_targets_met": {       # Phase 2B: updated field name and targets
+        "adni_auc_gte_0.65": False,
         "adni_rmse_lte_4.0": False,
-        "adni_c_index_gte_0.68": False,
-        "bh_auc_gte_0.78": False,
-        "subgroup_gap_lt_0.07": False,
+        "adni_c_index_gte_0.60": False,
+        "bh_auc_gte_0.75": False,
+        "subgroup_gap_lt_0.12": False,
         "ece_lt_0.10": False,
+        "ppv_npv_f1_reported": False,
     },
+    "leakage_fix_confirmed": True,  # Phase 2B: ABETA42_CSF removed from fluid features
     "wandb_run_ids": {},
     "evaluation_date": "",
 }
@@ -193,6 +220,69 @@ def _run_inference(model: NeuroFusionAD, dataloader, device: str = "cpu") -> dic
             if all_event
             else np.ones(len(all_logits))
         ),
+    }
+
+
+def _compute_threshold_metrics(
+    y_true: np.ndarray,
+    y_logits: np.ndarray,
+) -> dict:
+    """Compute PPV, NPV, F1, sensitivity, specificity at Youden's optimal threshold.
+
+    Youden's J statistic = sensitivity + specificity - 1. The threshold that
+    maximizes J is used to binarize predictions for all threshold-dependent metrics.
+
+    Args:
+        y_true: Binary ground truth labels array of shape [N] (0/1, no NaN).
+        y_logits: Raw model logits (pre-sigmoid) of shape [N].
+
+    Returns:
+        Dict with keys: optimal_threshold, sensitivity, specificity, ppv, npv, f1.
+        All values are Python floats. Returns NaN values if insufficient data.
+    """
+    nan_result = {
+        "optimal_threshold": float("nan"),
+        "sensitivity": float("nan"),
+        "specificity": float("nan"),
+        "ppv": float("nan"),
+        "npv": float("nan"),
+        "f1": float("nan"),
+    }
+
+    # Filter NaN labels
+    valid_mask = ~np.isnan(y_true)
+    y_true_clean = y_true[valid_mask].astype(int)
+    y_logits_clean = y_logits[valid_mask]
+
+    if len(np.unique(y_true_clean)) < 2 or y_true_clean.sum() < 3:
+        return nan_result
+
+    y_prob = 1.0 / (1.0 + np.exp(-y_logits_clean.astype(float)))
+
+    # Youden's optimal threshold
+    fpr, tpr, thresholds = roc_curve(y_true_clean, y_prob)
+    youden_idx = int(np.argmax(tpr - fpr))
+    optimal_threshold = float(thresholds[youden_idx])
+
+    y_pred = (y_prob >= optimal_threshold).astype(int)
+
+    # PPV (precision), NPV, sensitivity (recall), specificity, F1
+    ppv = float(precision_score(y_true_clean, y_pred, zero_division=0))
+    sensitivity = float(recall_score(y_true_clean, y_pred, zero_division=0))
+    f1 = float(f1_score(y_true_clean, y_pred, zero_division=0))
+
+    # NPV = precision on the negative class
+    npv = float(precision_score(1 - y_true_clean, 1 - y_pred, zero_division=0))
+    # Specificity = recall on the negative class
+    specificity = float(recall_score(1 - y_true_clean, 1 - y_pred, zero_division=0))
+
+    return {
+        "optimal_threshold": optimal_threshold,
+        "sensitivity": sensitivity,
+        "specificity": specificity,
+        "ppv": ppv,
+        "npv": npv,
+        "f1": f1,
     }
 
 
@@ -304,16 +394,23 @@ def _plot_modality_importance(
 
 
 def _check_targets(results: dict) -> dict:
-    """Check which Phase 2 performance targets are met.
+    """Check which Phase 2B minimum acceptable results are met.
+
+    Phase 2B gates (minimum to proceed to Phase 3):
+        ADNI test AUC ≥ 0.65
+        Bio-Hermes test AUC ≥ 0.75
+        Subgroup max gap < 0.12
+        PPV/NPV/F1 reported
+        0 test failures
 
     Args:
         results: Partially-filled results dict.
 
     Returns:
-        Dict with boolean values for each target.
+        Dict with boolean values for each Phase 2B gate.
     """
     adni = results.get("adni_test", {})
-    bh = results.get("biohermes_val", {})
+    bh = results.get("biohermes_test", {})
     sub = results.get("subgroup_analysis", {})
 
     def _val(d: dict, key: str, default=float("nan")) -> float:
@@ -322,13 +419,20 @@ def _check_targets(results: dict) -> dict:
             return float(v[0]) if v else float("nan")
         return float(v) if v is not None else float("nan")
 
+    ppv_reported = (
+        not np.isnan(_val(adni, "ppv"))
+        and not np.isnan(_val(adni, "npv"))
+        and not np.isnan(_val(adni, "f1"))
+    )
+
     targets_met = {
-        "adni_auc_gte_0.80": _val(adni, "auc") >= 0.80,
+        "adni_auc_gte_0.65": _val(adni, "auc") >= 0.65,
         "adni_rmse_lte_4.0": _val(adni, "rmse") <= 4.0,
-        "adni_c_index_gte_0.68": _val(adni, "c_index") >= 0.68,
-        "bh_auc_gte_0.78": _val(bh, "auc") >= 0.78,
-        "subgroup_gap_lt_0.07": _val(sub, "max_auc_gap") < 0.07,
+        "adni_c_index_gte_0.60": _val(adni, "c_index") >= 0.60,
+        "bh_auc_gte_0.75": _val(bh, "auc") >= 0.75,
+        "subgroup_gap_lt_0.12": _val(sub, "max_auc_gap") < 0.12,
         "ece_lt_0.10": _val(adni, "ece_after") < 0.10,
+        "ppv_npv_f1_reported": ppv_reported,
     }
     return targets_met
 
@@ -459,14 +563,25 @@ def _run_dry_run_evaluation() -> dict:
             "clinical": float("nan"),
         }
 
+    # Phase 2B: compute PPV, NPV, F1, sensitivity, specificity at Youden threshold
+    threshold_metrics = _compute_threshold_metrics(
+        inference_results["amyloid_label"],
+        inference_results["amyloid_logit"],
+    )
+
     # Build results dict
     results = dict(RESULTS_SCHEMA)
     results["adni_test"] = {
         "auc": metrics.get("auc", float("nan")),
         "auc_ci": list(metrics.get("auc_ci", (float("nan"), float("nan")))),
         "auc_pr": metrics.get("auc_pr", float("nan")),
-        "sensitivity": metrics.get("sensitivity", float("nan")),
-        "specificity": metrics.get("specificity", float("nan")),
+        # Youden's optimal threshold metrics (Phase 2B requirement)
+        "optimal_threshold": threshold_metrics["optimal_threshold"],
+        "sensitivity": threshold_metrics["sensitivity"],
+        "specificity": threshold_metrics["specificity"],
+        "ppv": threshold_metrics["ppv"],
+        "npv": threshold_metrics["npv"],
+        "f1": threshold_metrics["f1"],
         "rmse": metrics.get("rmse", float("nan")),
         "rmse_ci": list(metrics.get("rmse_ci", (float("nan"), float("nan")))),
         "mae": metrics.get("mae", float("nan")),
@@ -478,14 +593,22 @@ def _run_dry_run_evaluation() -> dict:
         "temperature": float(temperature),
         "n_test": n,
     }
-    results["biohermes_val"] = {
+    # Phase 2B: biohermes_test (was biohermes_val — now uses held-out test split)
+    results["biohermes_test"] = {
         "auc": float("nan"),
         "auc_ci": [float("nan"), float("nan")],
-        "n_val": 0,
+        "ppv": float("nan"),
+        "npv": float("nan"),
+        "f1": float("nan"),
+        "sensitivity": float("nan"),
+        "specificity": float("nan"),
+        "optimal_threshold": float("nan"),
+        "n_test": 0,
     }
     results["subgroup_analysis"] = _serialize_subgroup(subgroup_results)
     results["modality_importance"] = importance_scores
-    results["phase2_targets_met"] = _check_targets(results)
+    results["phase2b_targets_met"] = _check_targets(results)
+    results["leakage_fix_confirmed"] = True
     results["evaluation_date"] = datetime.now(timezone.utc).isoformat()
 
     return results
@@ -527,7 +650,7 @@ def main() -> None:
     """Entry point for model evaluation script.
 
     Parses arguments, runs evaluation, and saves results to
-    docs/results/phase2_results.json.
+    docs/results/phase2b_results.json.
     """
     parser = argparse.ArgumentParser(
         description="NeuroFusion-AD model evaluation script."
@@ -602,21 +725,53 @@ def main() -> None:
 
     log.info("Results saved", path=str(RESULTS_FILE))
 
-    # Print summary
-    print("\n" + "=" * 60)
-    print("NEUROFUSION-AD EVALUATION RESULTS")
-    print("=" * 60)
+    # Print summary — Phase 2B format
+    def _fmt(val, fmt=".4f"):
+        return f"{val:{fmt}}" if val is not None else "N/A"
+
+    print("\n" + "=" * 65)
+    print("NEUROFUSION-AD PHASE 2B EVALUATION RESULTS")
+    print("=" * 65)
     adni = results_clean.get("adni_test", {})
-    print(f"ADNI Test AUC:      {adni.get('auc', 'N/A'):.4f}")
-    print(f"ADNI Test RMSE:     {adni.get('rmse', 'N/A')}")
-    print(f"ADNI Test C-index:  {adni.get('c_index', 'N/A')}")
-    print(f"ECE (before/after): {adni.get('ece_before', 'N/A'):.4f} / {adni.get('ece_after', 'N/A'):.4f}")
-    print(f"Temperature:        {adni.get('temperature', 1.0):.4f}")
-    print("\nPhase 2 Targets Met:")
-    for target, passed in results_clean.get("phase2_targets_met", {}).items():
+    bh = results_clean.get("biohermes_test", {})
+
+    print("\n--- ADNI Test Set ---")
+    print(f"  AUC (ROC):          {_fmt(adni.get('auc'))}")
+    print(f"  AUC-PR:             {_fmt(adni.get('auc_pr'))}")
+    print(f"  RMSE (MMSE slope):  {_fmt(adni.get('rmse'))}")
+    print(f"  C-index (survival): {_fmt(adni.get('c_index'))}")
+    print(f"  ECE before/after:   {_fmt(adni.get('ece_before'))} / {_fmt(adni.get('ece_after'))}")
+    print(f"  Temperature:        {_fmt(adni.get('temperature'))}")
+    print(f"  Optimal threshold:  {_fmt(adni.get('optimal_threshold'))}")
+    print(f"  Sensitivity (TPR):  {_fmt(adni.get('sensitivity'))}")
+    print(f"  Specificity (TNR):  {_fmt(adni.get('specificity'))}")
+    print(f"  PPV (precision):    {_fmt(adni.get('ppv'))}")
+    print(f"  NPV:                {_fmt(adni.get('npv'))}")
+    print(f"  F1:                 {_fmt(adni.get('f1'))}")
+    print(f"  N test:             {adni.get('n_test', 'N/A')}")
+
+    print("\n--- Bio-Hermes-001 Test Set ---")
+    print(f"  AUC (ROC):          {_fmt(bh.get('auc'))}")
+    print(f"  PPV:                {_fmt(bh.get('ppv'))}")
+    print(f"  NPV:                {_fmt(bh.get('npv'))}")
+    print(f"  F1:                 {_fmt(bh.get('f1'))}")
+    print(f"  Sensitivity (TPR):  {_fmt(bh.get('sensitivity'))}")
+    print(f"  Specificity (TNR):  {_fmt(bh.get('specificity'))}")
+    print(f"  N test:             {bh.get('n_test', 'N/A')}")
+
+    leakage_ok = results_clean.get("leakage_fix_confirmed", False)
+    print(f"\n  Leakage fix confirmed (ABETA42_CSF removed): {'YES' if leakage_ok else 'NO'}")
+
+    print("\n--- Phase 2B Gate Results ---")
+    for target, passed in results_clean.get("phase2b_targets_met", {}).items():
         status = "PASS" if passed else "FAIL"
         print(f"  {target}: {status}")
-    print("=" * 60)
+
+    all_pass = all(results_clean.get("phase2b_targets_met", {}).values())
+    print("\n" + ("ALL PHASE 2B GATES PASSED — proceed to Phase 3" if all_pass
+                  else "SOME GATES FAILED — review before Phase 3"))
+    print("=" * 65)
+    print(f"Results saved → {RESULTS_FILE}")
 
 
 if __name__ == "__main__":

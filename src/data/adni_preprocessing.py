@@ -54,8 +54,9 @@ DXSUM_RDA    = RDA_DIR / "DXSUM.rda"
 REGISTRY_RDA = RDA_DIR / "REGISTRY.rda"
 CDR_RDA      = RDA_DIR / "CDR.rda"
 
-# Feature dimension constants (preserved for backward compatibility with tests)
-_FLUID_DIM = 6
+# Feature dimension constants
+# Phase 2B: FLUID_DIM reduced from 6 to 2 (ABETA42_CSF removed — leakage fix)
+_FLUID_DIM = 2
 _ACOUSTIC_DIM = 12
 _MOTOR_DIM = 8
 _CLINICAL_DIM = 10
@@ -522,10 +523,14 @@ def normalize_and_split(
     Returns:
         Tuple of (df_train, df_val, df_test).
     """
+    # Phase 2B: ABETA42_CSF excluded from scaling — it is the AMYLOID_POSITIVE label source.
+    # ABETA42_CSF is retained in the CSV as ABETA42_CSF_LABEL_SOURCE (metadata only,
+    # never read by NeuroFusionCSVDataset fluid encoder).
     FEATURE_COLS_TO_SCALE = [
         "PTAU217", "ABETA4240_RATIO", "NFL_PLASMA", "GFAP_PLASMA",
-        "PTAU181_CSF", "ABETA42_CSF",
+        "PTAU181_CSF",
         "AGE", "MMSE_BASELINE", "EDUCATION_YEARS",
+        "ABETA42_PLASMA", "ABETA40_PLASMA",
         "acoustic_jitter", "acoustic_shimmer", "acoustic_hnr",
         "acoustic_f0_mean", "acoustic_f0_std",
         "acoustic_mfcc1", "acoustic_mfcc2", "acoustic_mfcc3",
@@ -554,6 +559,12 @@ def normalize_and_split(
     df_train[scale_cols] = scaler.fit_transform(df_train[scale_cols].fillna(0))
     df_val[scale_cols]   = scaler.transform(df_val[scale_cols].fillna(0))
     df_test[scale_cols]  = scaler.transform(df_test[scale_cols].fillna(0))
+
+    # Rename ABETA42_CSF → ABETA42_CSF_LABEL_SOURCE to make leakage guard explicit.
+    # The NeuroFusionCSVDataset never reads this column for model features.
+    for df_split in (df_train, df_val, df_test):
+        if "ABETA42_CSF" in df_split.columns:
+            df_split.rename(columns={"ABETA42_CSF": "ABETA42_CSF_LABEL_SOURCE"}, inplace=True)
 
     # Save scaler
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
@@ -607,8 +618,9 @@ try:
             SDP-001 § 6.2 — Data normalization specification
         """
 
-        FLUID_MEAN    = torch.tensor([12.0, 0.10, 30.0, 150.0, 250.0, 800.0])
-        FLUID_STD     = torch.tensor([15.0, 0.05, 20.0,  80.0, 100.0, 200.0])
+        # Phase 2B: fluid is [PTAU217, NFL_PLASMA] only (ABETA42_CSF removed — leakage fix)
+        FLUID_MEAN    = torch.tensor([12.0, 30.0])
+        FLUID_STD     = torch.tensor([15.0, 20.0])
         ACOUSTIC_MEAN = torch.tensor([0.005, 0.04, 15.0, 130.0, 25.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         ACOUSTIC_STD  = torch.tensor([0.005, 0.02,  5.0,  30.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         MOTOR_MEAN    = torch.tensor([4.0, 0.3, 50.0, 2.0, 0.15, 0.05, 25.0, 0.10])

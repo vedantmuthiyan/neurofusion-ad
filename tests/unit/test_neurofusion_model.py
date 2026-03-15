@@ -33,10 +33,10 @@ def make_valid_batch(batch_size: int) -> dict[str, torch.Tensor]:
     Returns:
         Dict with keys 'fluid', 'acoustic', 'motor', 'clinical' as float tensors.
     """
-    fluid = torch.zeros(batch_size, 6)
-    fluid[:, 0] = 5.0     # pTau-217 in [0.1, 100]
-    fluid[:, 1] = 0.1     # Abeta42/40 ratio in [0.01, 0.30]
-    fluid[:, 2] = 50.0    # NfL in [5, 200]
+    # Phase 2B: fluid is [PTAU217, NFL_PLASMA] only (2 features)
+    fluid = torch.zeros(batch_size, 2)
+    fluid[:, 0] = 5.0     # pTau-217
+    fluid[:, 1] = 50.0    # NfL
 
     acoustic = torch.zeros(batch_size, 12)
     acoustic[:, 0] = 0.005   # jitter in [0.0001, 0.05]
@@ -146,14 +146,14 @@ def test_forward_cox_hazard_shape() -> None:
 
 
 def test_forward_embedding_shape() -> None:
-    """fused_embedding output has shape [batch_size, 768]."""
+    """fused_embedding output has shape [batch_size, 256] (Phase 2B embed_dim=256)."""
     model = NeuroFusionAD()
     model.eval()
     batch = make_valid_batch(batch_size=8)
     with torch.no_grad():
         outputs = model(batch)
-    assert outputs["fused_embedding"].shape == (8, 768), (
-        f"Expected (8, 768), got {outputs['fused_embedding'].shape}"
+    assert outputs["fused_embedding"].shape == (8, 256), (
+        f"Expected (8, 256), got {outputs['fused_embedding'].shape}"
     )
 
 
@@ -201,12 +201,20 @@ def test_disclaimer_present() -> None:
 
 
 def test_count_parameters() -> None:
-    """Model has more than 10M trainable parameters (target ~60M)."""
+    """Phase 2B: model must have > 500K and < 5M trainable parameters.
+
+    Phase 2B reduces capacity to prevent overfitting on N=345 training samples.
+    embed_dim=256, gnn_layers=2, attention_heads=4 → target ~1.2M parameters.
+    """
     model = NeuroFusionAD()
     n_params = model.count_parameters()
-    assert n_params > 10_000_000, (
-        f"Expected > 10M parameters, got {n_params:,}. "
-        "Check that all sub-modules are registered correctly."
+    assert n_params > 500_000, (
+        f"Expected > 500K parameters, got {n_params:,}. "
+        "Model may be under-parameterised."
+    )
+    assert n_params < 5_000_000, (
+        f"Expected < 5M parameters (Phase 2B capacity reduction), got {n_params:,}. "
+        "Check embed_dim, gnn_layers, attention_heads settings."
     )
 
 
@@ -261,5 +269,5 @@ def test_different_batch_sizes(batch_size: int) -> None:
     assert outputs["amyloid_logit"].shape == (batch_size, 1)
     assert outputs["mmse_slope"].shape == (batch_size, 1)
     assert outputs["cox_log_hazard"].shape == (batch_size, 1)
-    assert outputs["fused_embedding"].shape == (batch_size, 768)
+    assert outputs["fused_embedding"].shape == (batch_size, 256)
     assert outputs["disclaimer"] == CLINICAL_DISCLAIMER

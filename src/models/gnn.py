@@ -112,36 +112,36 @@ class NeuroFusionGNN(nn.Module):
 
     def __init__(
         self,
-        hidden_dim: int = 768,
-        dropout: float = 0.1,
+        hidden_dim: int = 256,
+        dropout: float = 0.4,
     ) -> None:
         """Initialise NeuroFusionGNN.
 
+        Phase 2B: 2-layer (was 3), hidden_dim=256 (was 768), dropout=0.4.
+
         Args:
-            hidden_dim: Node feature dimension throughout the network (default 768).
-            dropout: Dropout probability (default 0.1).
+            hidden_dim: Node feature dimension throughout the network (default 256).
+            dropout: Dropout probability (default 0.4).
         """
         super().__init__()
         self.hidden_dim = hidden_dim
 
-        # Three GraphSAGE convolution layers (SAD-001 § 5.3.2)
+        # Two GraphSAGE convolution layers (Phase 2B — reduced capacity)
         self.conv1 = SAGEConv(hidden_dim, hidden_dim)
         self.conv2 = SAGEConv(hidden_dim, hidden_dim)
-        self.conv3 = SAGEConv(hidden_dim, hidden_dim)
 
         # LayerNorm after each convolution
         self.norm1 = nn.LayerNorm(hidden_dim)
         self.norm2 = nn.LayerNorm(hidden_dim)
-        self.norm3 = nn.LayerNorm(hidden_dim)
 
-        # Shared dropout (not applied after final layer)
+        # Shared dropout
         self.dropout = nn.Dropout(p=dropout)
 
         log.info(
             "NeuroFusionGNN initialised",
             hidden_dim=hidden_dim,
             dropout=dropout,
-            num_layers=3,
+            num_layers=2,
         )
 
     def forward(
@@ -149,22 +149,20 @@ class NeuroFusionGNN(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
     ) -> torch.Tensor:
-        """Run 3 rounds of GraphSAGE aggregation.
+        """Run 2 rounds of GraphSAGE aggregation.
 
-        Each of the first two layers applies SAGEConv -> LayerNorm -> GELU ->
-        Dropout and adds a residual connection. The third layer applies
-        SAGEConv -> LayerNorm with a residual but no dropout, preserving
-        representational capacity at the output.
+        Each layer applies SAGEConv -> LayerNorm -> GELU -> Dropout with
+        a residual connection.
 
         Args:
-            x: Node feature matrix [n_nodes, 768].
+            x: Node feature matrix [n_nodes, hidden_dim].
             edge_index: Edge indices [2, num_edges] in COO format.
 
         Returns:
-            Updated node features [n_nodes, 768] after 3-layer aggregation.
+            Updated node features [n_nodes, hidden_dim] after 2-layer aggregation.
 
         Raises:
-            ValueError: If x does not have shape [..., 768].
+            ValueError: If x does not have shape [..., hidden_dim].
         """
         if x.shape[-1] != self.hidden_dim:
             raise ValueError(
@@ -185,11 +183,6 @@ class NeuroFusionGNN(nn.Module):
         h2 = F.gelu(h2)
         h2 = self.dropout(h2)
         x = x + h2  # residual connection
-
-        # Layer 3: SAGEConv + LayerNorm + residual (no dropout on final layer)
-        h3 = self.conv3(x, edge_index)
-        h3 = self.norm3(h3)
-        x = x + h3  # residual connection
 
         log.debug(
             "NeuroFusionGNN forward complete",

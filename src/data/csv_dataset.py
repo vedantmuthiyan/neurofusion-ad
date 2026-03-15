@@ -4,9 +4,17 @@ Loads patient records from processed CSV files (ADNI or Bio-Hermes-001) and
 returns batches compatible with NeuroFusionAD.forward().
 
 Column mapping logic:
-    ADNI: fluid (6), acoustic (12), motor (8), clinical (10 = 8 base + 2 derived)
-    Bio-Hermes-001: fluid (6), acoustic (10 padded to 12), motor (8 selected from 15),
+    ADNI: fluid (2), acoustic (12), motor (8), clinical (10 = 8 base + 2 derived)
+    Bio-Hermes-001: fluid (2), acoustic (10 padded to 12), motor (8 selected from 15),
                     clinical (10 = 4 base + 6 padded/zeroed)
+
+Phase 2B leakage fix: ABETA42_CSF removed from fluid features.
+    AMYLOID_POSITIVE = 1 if ABETA42_CSF < 192 — including it was direct leakage (r=-0.86).
+    Fluid now uses only plasma biomarkers: PTAU217 and NFL_PLASMA (both available in
+    ADNI and Bio-Hermes-001, enabling consistent cross-cohort alignment).
+    The CSF-derived ABETA_PTAU_RATIO clinical feature is replaced with the
+    plasma Abeta40/42 ratio (ABETA40_PLASMA / ABETA42_PLASMA), which is
+    a validated biomarker and does not use the CSF Abeta42 label source.
 
 Median imputation is fit on the train split and applied to val/test splits.
 Bio-Hermes-001 acoustic and motor features require separate standardization
@@ -73,7 +81,7 @@ class NeuroFusionCSVDataset(Dataset):
         - Column-to-encoder mapping (fluid/acoustic/motor/clinical).
         - Median imputation for null values: fit on train split, apply to val/test.
         - Bio-Hermes-001 acoustic/motor re-standardization (fit on BH train only).
-        - Derived clinical features (PTAU_TAU_RATIO, ABETA_PTAU_RATIO for ADNI).
+        - Derived clinical features (PTAU_TAU_RATIO, ABETA4240_PLASMA_RATIO for ADNI).
         - Padding Bio-Hermes-001 acoustic from 10 to 12 with zeros.
         - Returns batch dict compatible with NeuroFusionAD.forward().
         - SHA-256 hashed patient IDs (PHI safe).
@@ -102,9 +110,12 @@ class NeuroFusionCSVDataset(Dataset):
     """
 
     # --- ADNI column definitions ---
+    # Phase 2B: ABETA42_CSF removed — it is the source of AMYLOID_POSITIVE label
+    # (label = 1 if ABETA42_CSF < 192 pg/mL), causing data leakage (r=-0.86).
+    # Two plasma biomarkers used instead: pTau217 and NfL. Both available in
+    # ADNI and Bio-Hermes-001, enabling consistent cross-cohort feature alignment.
     ADNI_FLUID_COLS = [
-        "PTAU217", "ABETA4240_RATIO", "NFL_PLASMA", "GFAP_PLASMA",
-        "PTAU181_CSF", "ABETA42_CSF",
+        "PTAU217", "NFL_PLASMA",
     ]
     ADNI_ACOUSTIC_COLS = [
         "acoustic_jitter", "acoustic_shimmer", "acoustic_hnr",
@@ -124,9 +135,9 @@ class NeuroFusionCSVDataset(Dataset):
     ]
 
     # --- Bio-Hermes-001 column definitions ---
+    # Phase 2B: aligned with ADNI — same 2 plasma biomarkers (pTau217 + NfL)
     BH_FLUID_COLS = [
-        "PTAU217", "ABETA4240_RATIO", "NFL_PLASMA", "GFAP_PLASMA",
-        "PTAU181_PLASMA", "ABETA42_PLASMA",
+        "PTAU217", "NFL_PLASMA",
     ]
     # 10 acoustic columns; padded to 12 with zeros
     BH_ACOUSTIC_COLS = [
@@ -285,7 +296,7 @@ class NeuroFusionCSVDataset(Dataset):
             Dict with 'fluid', 'acoustic', 'motor', 'clinical', label keys,
             and 'patient_id' (SHA-256 hashed).
         """
-        # Fluid (6)
+        # Fluid (2): PTAU217, NFL_PLASMA only (ABETA42_CSF removed — Phase 2B leakage fix)
         fluid = [float(row.get(c, 0.0)) for c in self.ADNI_FLUID_COLS]
 
         # Acoustic (12)
@@ -294,14 +305,19 @@ class NeuroFusionCSVDataset(Dataset):
         # Motor (8)
         motor = [float(row.get(c, 0.0)) for c in self.ADNI_MOTOR_COLS]
 
-        # Clinical (10): 8 base + 2 derived
+        # Clinical (10): 8 base + 2 derived (non-leaking)
         clin_base = [float(row.get(c, 0.0)) for c in self.ADNI_CLINICAL_BASE_COLS]
         tau_csf = float(row.get("TAU_CSF", 0.0))
         ptau181_csf = float(row.get("PTAU181_CSF", 0.0))
-        abeta42_csf = float(row.get("ABETA42_CSF", 0.0))
+        # Derived feature 9: pTau181/totalTau ratio — neurodegeneration marker (non-leaking)
         ptau_tau_ratio = ptau181_csf / (tau_csf + 1e-6)
-        abeta_ptau_ratio = abeta42_csf / (ptau181_csf + 1e-6)
-        clinical = clin_base + [ptau_tau_ratio, abeta_ptau_ratio]  # 10 total
+        # Derived feature 10: plasma Abeta40/42 ratio — validated plasma biomarker
+        # Uses ABETA40_PLASMA and ABETA42_PLASMA (already in clin_base positions 7-8).
+        # CSF ABETA42_CSF is intentionally excluded here (label source — Phase 2B fix).
+        abeta42_plasma = float(row.get("ABETA42_PLASMA", 0.0))
+        abeta40_plasma = float(row.get("ABETA40_PLASMA", 0.0))
+        abeta4240_plasma_ratio = abeta40_plasma / (abeta42_plasma + 1e-6)
+        clinical = clin_base + [ptau_tau_ratio, abeta4240_plasma_ratio]  # 10 total
 
         # Labels
         amyloid_label = float(row["AMYLOID_POSITIVE"]) if "AMYLOID_POSITIVE" in row.index and not pd.isna(row["AMYLOID_POSITIVE"]) else float("nan")
@@ -338,7 +354,7 @@ class NeuroFusionCSVDataset(Dataset):
             Dict with 'fluid', 'acoustic', 'motor', 'clinical', label keys,
             and 'patient_id' (SHA-256 hashed).
         """
-        # Fluid (6)
+        # Fluid (2): PTAU217, NFL_PLASMA only (aligned with ADNI — Phase 2B)
         fluid = [float(row.get(c, 0.0)) for c in self.BH_FLUID_COLS]
 
         # Acoustic (10 + 2 zeros = 12)
@@ -431,7 +447,7 @@ class NeuroFusionCSVDataset(Dataset):
 
         Returns:
             Dict with keys:
-                - 'fluid': FloatTensor [6]
+                - 'fluid': FloatTensor [2]  # Phase 2B: PTAU217 + NFL_PLASMA only
                 - 'acoustic': FloatTensor [12]
                 - 'motor': FloatTensor [8]
                 - 'clinical': FloatTensor [10]

@@ -1,0 +1,98 @@
+# NeuroFusion-AD Phase 2B Remediated HPO Configuration
+# Phase 2B budget constraint: 15 trials only (~5 hrs at 35 epochs each on RTX 3090).
+# Architecture is fixed at Phase 2B reduced capacity (no longer searched).
+#
+# Phase 2B changes vs original hpo_config:
+#   - n_trials: 30 → 15 (budget constraint ~$12 remaining)
+#   - n_epochs_per_trial: 40 → 35
+#   - embed_dim/num_heads/gnn_layers: FIXED at Phase 2B values (not searched)
+#   - dropout: search range 0.3–0.5 (was 0.05–0.30, Phase 2B needs higher)
+#   - weight_decay: search range 5e-4–5e-3 (was 1e-5–1e-3, Phase 2B needs higher)
+#
+# Document traceability:
+#   SAD-001 § 6.2 — HPO Strategy
+#   Phase 2B budget: ~$12 remaining, all agents use claude-sonnet-4-6 only
+
+study_name: neurofusion_phase2b_hpo
+storage: sqlite:///optuna_study_phase2b.db
+n_trials: 15             # budget constraint (was 30)
+direction: maximize      # maximize val_auc
+metric: val_auc
+
+pruner: MedianPruner
+pruner_n_startup_trials: 3    # Phase 2B: reduced (fewer trials total)
+pruner_n_warmup_steps: 8
+
+n_epochs_per_trial: 35        # reduced from 40 to fit budget
+early_stopping_patience: 12
+
+# Search space — Phase 2B: smaller search space to avoid wasting budget
+search_space:
+  learning_rate:
+    type: log_uniform
+    low: 5.0e-5
+    high: 8.0e-4
+
+  weight_decay:
+    type: log_uniform
+    low: 5.0e-4     # Phase 2B: higher lower bound (stronger regularization needed)
+    high: 5.0e-3
+
+  dropout:
+    type: uniform
+    low: 0.30       # Phase 2B: higher dropout range
+    high: 0.50
+
+  gradient_accumulation_steps:
+    type: categorical
+    choices: [2, 4]   # removed 8 — too slow on 35-epoch trials
+
+  batch_size:
+    type: categorical
+    choices: [16, 32]
+
+  cls_weight:
+    type: uniform
+    low: 0.8
+    high: 2.0
+
+  reg_weight:
+    type: uniform
+    low: 0.1
+    high: 0.8
+
+  surv_weight:
+    type: uniform
+    low: 0.1
+    high: 0.8
+
+  graph_threshold:
+    type: uniform
+    low: 0.5
+    high: 0.9
+
+  onecycle_pct_start:
+    type: uniform
+    low: 0.2
+    high: 0.4
+
+# Fixed settings for HPO trials — Phase 2B architecture is fixed, not searched
+fixed:
+  embed_dim: 256       # Phase 2B: fixed (was searched as 256/512/768)
+  num_heads: 4         # Phase 2B: fixed
+  gnn_layers: 2        # Phase 2B: fixed
+  gradient_clip: 0.5   # Phase 2B: fixed
+  fluid_input_dim: 2   # Phase 2B: [PTAU217, NFL_PLASMA] only
+  data:
+    adni_train: data/processed/adni/adni_train.csv
+    adni_val: data/processed/adni/adni_val.csv
+    scaler_path: data/processed/adni/scaler.pkl
+
+wandb:
+  project: neurofusion-ad
+  tags:
+    - hpo
+    - optuna
+    - phase2b
+    - remediated
+    - leakage-fixed

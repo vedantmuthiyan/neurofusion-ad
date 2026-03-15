@@ -138,24 +138,34 @@ class TestADNIPreprocessor:
     """Tests for ADNIPreprocessor normalization and imputation."""
 
     def test_preprocessor_normalize_shape(self, preprocessor: ADNIPreprocessor) -> None:
-        """Test 8: normalize returns a tensor of the same shape as the input."""
-        features = torch.tensor([10.0, 0.10, 30.0, 150.0, 250.0, 800.0])
+        """Test 8: normalize returns a tensor of the same shape as the input.
+
+        Phase 2B: fluid is [ptau217, nfl_plasma] — 2 features.
+        FLUID_MEAN and FLUID_STD are now 2-element tensors.
+        """
+        features = torch.tensor([10.0, 30.0])  # Phase 2B: [ptau217, nfl_plasma]
         result = preprocessor.normalize(features, ADNIPreprocessor.FLUID_MEAN, ADNIPreprocessor.FLUID_STD)
         assert result.shape == features.shape, (
             f"normalize changed shape from {features.shape} to {result.shape}"
         )
 
     def test_preprocessor_impute_nan(self, preprocessor: ADNIPreprocessor) -> None:
-        """Test 9: impute_missing replaces all NaN values."""
-        features = torch.tensor([float("nan"), 0.10, float("nan"), 150.0, 250.0, 800.0])
+        """Test 9: impute_missing replaces all NaN values.
+
+        Phase 2B: fluid is 2 features — uses 2-element FLUID_MEAN.
+        """
+        features = torch.tensor([float("nan"), float("nan")])  # Phase 2B: [ptau217, nfl_plasma]
         result = preprocessor.impute_missing(features, ADNIPreprocessor.FLUID_MEAN)
         assert not torch.isnan(result).any(), "impute_missing left NaN values in the tensor."
         assert result.shape == features.shape
 
     def test_preprocessor_preprocess_record(self, preprocessor: ADNIPreprocessor) -> None:
-        """Test 10: preprocess_record returns dict with correct keys and tensor shapes."""
+        """Test 10: preprocess_record returns dict with correct keys and tensor shapes.
+
+        Phase 2B: fluid is [ptau217, nfl_plasma] — 2 features.
+        """
         record = {
-            "fluid":    [10.0, 0.10, 30.0, 150.0, 250.0, 800.0],
+            "fluid":    [10.0, 30.0],  # Phase 2B: [ptau217, nfl_plasma]
             "acoustic": [0.005, 0.04, 15.0, 130.0, 25.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             "motor":    [4.0, 0.3, 50.0, 2.0, 0.15, 0.05, 25.0, 0.10],
             "clinical": [72.0, 14.0, 0.0, 26.0, 1.5, 5.0, 27.0, 130.0, 0.0, 2.0],
@@ -163,7 +173,7 @@ class TestADNIPreprocessor:
         result = preprocessor.preprocess_record(record)
 
         assert set(result.keys()) == {"fluid", "acoustic", "motor", "clinical"}
-        assert result["fluid"].shape == (6,), f"fluid shape: {result['fluid'].shape}"
+        assert result["fluid"].shape == (2,), f"fluid shape: {result['fluid'].shape}"  # Phase 2B
         assert result["acoustic"].shape == (12,), f"acoustic shape: {result['acoustic'].shape}"
         assert result["motor"].shape == (8,), f"motor shape: {result['motor'].shape}"
         assert result["clinical"].shape == (10,), f"clinical shape: {result['clinical'].shape}"

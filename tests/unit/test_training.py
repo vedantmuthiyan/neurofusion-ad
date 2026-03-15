@@ -98,7 +98,7 @@ def _make_minimal_model() -> nn.Module:
     class _MinimalModel(nn.Module):
         def __init__(self):
             super().__init__()
-            self.fc_fluid = nn.Linear(6, 16)
+            self.fc_fluid = nn.Linear(2, 16)  # Phase 2B: fluid dim=2
             self.fc_acoustic = nn.Linear(12, 16)
             self.fc_motor = nn.Linear(8, 16)
             self.fc_clinical = nn.Linear(10, 16)
@@ -134,7 +134,7 @@ def _make_batch(batch_size: int = 4, device: str = "cpu") -> dict[str, torch.Ten
         Dict with 'fluid', 'acoustic', 'motor', 'clinical' tensors.
     """
     return {
-        "fluid": torch.randn(batch_size, 6, device=device),
+        "fluid": torch.randn(batch_size, 2, device=device),  # Phase 2B: fluid dim=2
         "acoustic": torch.randn(batch_size, 12, device=device),
         "motor": torch.randn(batch_size, 8, device=device),
         "clinical": torch.randn(batch_size, 10, device=device),
@@ -412,7 +412,7 @@ class TestAugmentBatch:
     def test_augment_batch_adds_noise(self) -> None:
         """Test 12: augment_batch returns feature tensors different from input."""
         batch = {
-            "fluid": torch.zeros(8, 6),
+            "fluid": torch.zeros(8, 2),  # Phase 2B: fluid dim=2
             "acoustic": torch.zeros(8, 12),
             "motor": torch.zeros(8, 8),
             "clinical": torch.zeros(8, 10),
@@ -430,7 +430,7 @@ class TestAugmentBatch:
         """Test 13: augment_batch does not modify label tensors."""
         label_val = torch.ones(8) * 0.5
         batch = {
-            "fluid": torch.randn(8, 6),
+            "fluid": torch.randn(8, 2),  # Phase 2B: fluid dim=2
             "acoustic": torch.randn(8, 12),
             "motor": torch.randn(8, 8),
             "clinical": torch.randn(8, 10),
@@ -453,7 +453,7 @@ class TestAugmentBatch:
     def test_augment_batch_noise_std_zero_no_change(self) -> None:
         """Test 14: augment_batch with noise_std=0.0 does not modify features."""
         batch = {
-            "fluid": torch.ones(4, 6),
+            "fluid": torch.ones(4, 2),  # Phase 2B: fluid dim=2
             "acoustic": torch.ones(4, 12),
             "motor": torch.ones(4, 8),
             "clinical": torch.ones(4, 10),
@@ -486,7 +486,7 @@ class TestNeuroFusionCSVDatasetADNI:
         assert len(ds) == 20, f"Expected 20 samples, got {len(ds)}"
 
         item = ds[0]
-        assert item["fluid"].shape == (6,), f"fluid shape: {item['fluid'].shape}"
+        assert item["fluid"].shape == (2,), f"fluid shape: {item['fluid'].shape}"  # Phase 2B
         assert item["acoustic"].shape == (12,), f"acoustic shape: {item['acoustic'].shape}"
         assert item["motor"].shape == (8,), f"motor shape: {item['motor'].shape}"
         assert item["clinical"].shape == (10,), f"clinical shape: {item['clinical'].shape}"
@@ -538,7 +538,7 @@ class TestNeuroFusionCSVDatasetBioHermes:
 
         assert len(ds) == 15, f"Expected 15 samples, got {len(ds)}"
         item = ds[0]
-        assert item["fluid"].shape == (6,), f"fluid shape: {item['fluid'].shape}"
+        assert item["fluid"].shape == (2,), f"fluid shape: {item['fluid'].shape}"  # Phase 2B
         assert item["acoustic"].shape == (12,), f"acoustic shape (padded): {item['acoustic'].shape}"
         assert item["motor"].shape == (8,), f"motor shape: {item['motor'].shape}"
         assert item["clinical"].shape == (10,), f"clinical shape: {item['clinical'].shape}"
@@ -658,7 +658,7 @@ class TestNeuroFusionTrainer:
 
             def __getitem__(self, idx: int) -> dict:
                 return {
-                    "fluid": torch.randn(6),
+                    "fluid": torch.randn(2),  # Phase 2B: fluid dim=2
                     "acoustic": torch.randn(12),
                     "motor": torch.randn(8),
                     "clinical": torch.randn(10),

@@ -29,7 +29,7 @@ from src.models.gnn import NeuroFusionGNN, construct_patient_similarity_graph
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-HIDDEN_DIM = 768
+HIDDEN_DIM = 256  # Phase 2B: reduced from 768 to 256
 N_PATIENTS = 16
 
 

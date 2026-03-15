@@ -101,18 +101,20 @@ class NeuroFusionAD(nn.Module):
 
     def __init__(
         self,
-        embed_dim: int = 768,
-        num_heads: int = 8,
+        embed_dim: int = 256,
+        num_heads: int = 4,
         graph_threshold: float = 0.7,
-        dropout: float = 0.1,
+        dropout: float = 0.4,
     ) -> None:
         """Initialise NeuroFusionAD.
 
+        Phase 2B defaults: embed_dim=256, num_heads=4, dropout=0.4.
+
         Args:
-            embed_dim: Embedding dimension (default 768).
-            num_heads: Attention heads in CrossModalAttention (default 8).
+            embed_dim: Embedding dimension (default 256).
+            num_heads: Attention heads in CrossModalAttention (default 4).
             graph_threshold: Cosine similarity threshold for patient graph (default 0.7).
-            dropout: Dropout probability (default 0.1).
+            dropout: Dropout probability (default 0.4).
         """
         super().__init__()
 

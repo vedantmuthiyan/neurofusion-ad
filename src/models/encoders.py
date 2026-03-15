@@ -1,18 +1,25 @@
 """Modality encoders for NeuroFusion-AD.
 
 This module implements four modality-specific encoders that transform
-heterogeneous patient data into a common 768-dimensional embedding space
+heterogeneous patient data into a common 256-dimensional embedding space
 for downstream cross-modal fusion and GNN processing.
+
+Phase 2B architecture (reduced capacity for N=345 training set):
+    - embed_dim: 256 (was 768)
+    - FluidBiomarkerEncoder: input_dim=2 (PTAU217, NFL_PLASMA only)
+      ABETA42_CSF removed — it was the source of AMYLOID_POSITIVE label,
+      causing data leakage (Pearson r=-0.86) in Phase 2.
+    - All encoders: output_dim=256, dropout=0.4
 
 All encoders are IEC 62304 Class B compliant — every public method carries
 a Google-style docstring and full type annotations. Input validation ensures
 physiologically impossible values are rejected before inference.
 
 Encoder inventory:
-    FluidBiomarkerEncoder    — 6 plasma/CSF biomarker features → R^768
-    DigitalAcousticEncoder   — 12 vocal/acoustic features → R^768
-    DigitalMotorEncoder      — 8 motor assessment features → R^768
-    ClinicalDemographicEncoder — 10 clinical/demographic features → R^768
+    FluidBiomarkerEncoder    — 2 plasma biomarker features → R^256
+    DigitalAcousticEncoder   — 12 vocal/acoustic features → R^256
+    DigitalMotorEncoder      — 8 motor assessment features → R^256
+    ClinicalDemographicEncoder — 10 clinical/demographic features → R^256
 
 Document traceability:
     SRS-001 § 4.2 — Multimodal Input Specification
@@ -129,14 +136,13 @@ def _validate_features(
 # ---------------------------------------------------------------------------
 
 def _build_encoder_layers(in_features: int) -> nn.Sequential:
-    """Construct the shared three-block MLP architecture for all encoders.
+    """Construct the shared two-block MLP architecture for all encoders.
 
-    All modality encoders share the same projection topology:
-        Block 1: Linear(in, 256)  → LayerNorm(256)  → GELU
-        Block 2: Linear(256, 512) → LayerNorm(512)  → GELU → Dropout(0.1)
-        Block 3: Linear(512, 768) → LayerNorm(768)
+    Phase 2B reduced-capacity architecture (appropriate for N=345):
+        Block 1: Linear(in, 128) → LayerNorm(128) → GELU → Dropout(0.4)
+        Block 2: Linear(128, 256) → LayerNorm(256)
 
-    The final LayerNorm stabilises the 768-dim output for dot-product
+    The final LayerNorm stabilises the 256-dim output for dot-product
     attention in the downstream CrossModalAttention module.
 
     Args:
@@ -147,17 +153,13 @@ def _build_encoder_layers(in_features: int) -> nn.Sequential:
     """
     return nn.Sequential(
         # Block 1
-        nn.Linear(in_features, 256),
-        nn.LayerNorm(256),
+        nn.Linear(in_features, 128),
+        nn.LayerNorm(128),
         nn.GELU(),
+        nn.Dropout(p=0.4),
         # Block 2
-        nn.Linear(256, 512),
-        nn.LayerNorm(512),
-        nn.GELU(),
-        nn.Dropout(p=0.1),
-        # Block 3
-        nn.Linear(512, 768),
-        nn.LayerNorm(768),
+        nn.Linear(128, 256),
+        nn.LayerNorm(256),
     )
 
 
@@ -166,42 +168,33 @@ def _build_encoder_layers(in_features: int) -> nn.Sequential:
 # ---------------------------------------------------------------------------
 
 class FluidBiomarkerEncoder(nn.Module):
-    """Encodes plasma/CSF fluid biomarker panels into a 768-dim embedding.
+    """Encodes plasma biomarker panel into a 256-dim embedding.
 
-    Transforms a six-feature vector of Alzheimer's-relevant biomarkers
-    (pTau-217, Abeta42/40 ratio, NfL, GFAP, total-tau, Abeta42) into a
-    normalised 768-dimensional representation suitable for cross-modal fusion.
+    Phase 2B: input_dim reduced from 6 to 2. ABETA42_CSF removed because
+    the AMYLOID_POSITIVE label is derived from it (CSF Abeta42 < 192 pg/mL),
+    causing data leakage (Pearson r=-0.86 in Phase 2 training data).
 
-    Input feature schema (SRS-001 § 4.2.1):
-        index 0 — pTau-217 (pg/mL),      valid range: [0.1, 100]
-        index 1 — Abeta42/40 ratio,       valid range: [0.01, 0.30]
-        index 2 — NfL (pg/mL),            valid range: [5, 200]
-        index 3 — GFAP (pg/mL),           no range check
-        index 4 — total-tau (pg/mL),      no range check
-        index 5 — Abeta42 (pg/mL),        no range check
+    Input feature schema (SRS-001 § 4.2.1, Phase 2B revision):
+        index 0 — pTau-217 (pg/mL, StandardScaler normalized)
+        index 1 — NfL plasma (pg/mL, StandardScaler normalized)
 
     Architecture:
-        Linear(6, 256) → LayerNorm(256) → GELU →
-        Linear(256, 512) → LayerNorm(512) → GELU → Dropout(0.1) →
-        Linear(512, 768) → LayerNorm(768)
+        Linear(2, 128) → LayerNorm(128) → GELU → Dropout(0.4) →
+        Linear(128, 256) → LayerNorm(256)
 
     Example:
         >>> encoder = FluidBiomarkerEncoder()
-        >>> x = torch.zeros(4, 6)
-        >>> x[:, 0] = 5.0   # pTau-217
-        >>> x[:, 1] = 0.1   # Abeta42/40
-        >>> x[:, 2] = 50.0  # NfL
+        >>> x = torch.zeros(4, 2)
         >>> out = encoder(x)
         >>> out.shape
-        torch.Size([4, 768])
+        torch.Size([4, 256])
 
     Raises:
-        ValueError: If input contains NaN values or any validated biomarker
-            falls outside its defined physiological range.
+        ValueError: If input contains NaN values.
     """
 
-    INPUT_DIM: int = 6
-    OUTPUT_DIM: int = 768
+    INPUT_DIM: int = 2
+    OUTPUT_DIM: int = 256
 
     def __init__(self) -> None:
         """Initialise the FluidBiomarkerEncoder layers."""
@@ -214,24 +207,21 @@ class FluidBiomarkerEncoder(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Encode fluid biomarker features into a 768-dim embedding.
+        """Encode fluid biomarker features into a 256-dim embedding.
 
         Args:
-            x: Float tensor of shape [batch_size, 6] containing the six
-                fluid biomarker measurements for each sample in the batch.
+            x: Float tensor of shape [batch_size, 2] — [pTau217, NfL] normalized.
 
         Returns:
-            Float tensor of shape [batch_size, 768] — the normalised
-            biomarker embedding ready for cross-modal attention.
+            Float tensor of shape [batch_size, 256].
 
         Raises:
-            ValueError: If input contains NaN values or validated biomarkers
-                (pTau-217, Abeta42/40, NfL) fall outside physiological ranges.
+            ValueError: If input contains NaN values.
         """
         _validate_features(
             x,
-            ranges=_FLUID_RANGES,
-            names=_FLUID_RANGE_NAMES,
+            ranges={},
+            names={},
             encoder_name="FluidBiomarkerEncoder",
             skip_range_check=True,
         )
@@ -289,7 +279,7 @@ class DigitalAcousticEncoder(nn.Module):
     """
 
     INPUT_DIM: int = 12
-    OUTPUT_DIM: int = 768
+    OUTPUT_DIM: int = 256
 
     def __init__(self) -> None:
         """Initialise the DigitalAcousticEncoder layers."""
@@ -374,7 +364,7 @@ class DigitalMotorEncoder(nn.Module):
     """
 
     INPUT_DIM: int = 8
-    OUTPUT_DIM: int = 768
+    OUTPUT_DIM: int = 256
 
     def __init__(self) -> None:
         """Initialise the DigitalMotorEncoder layers."""
@@ -456,7 +446,7 @@ class ClinicalDemographicEncoder(nn.Module):
     """
 
     INPUT_DIM: int = 10
-    OUTPUT_DIM: int = 768
+    OUTPUT_DIM: int = 256
 
     def __init__(self) -> None:
         """Initialise the ClinicalDemographicEncoder layers."""

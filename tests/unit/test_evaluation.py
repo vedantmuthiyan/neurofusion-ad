@@ -590,28 +590,47 @@ class TestSHAPExplainer:
         """
         mock_shap_module = MagicMock()
         mock_explainer_instance = MagicMock()
-        mock_shap_values = np.zeros((n_explain, 36), dtype=np.float32)
+        mock_shap_values = np.zeros((n_explain, 32), dtype=np.float32)  # Phase 2B: 2+12+8+10=32
         mock_explainer_instance.shap_values.return_value = mock_shap_values
         mock_explainer_instance.expected_value = 0.3
         mock_shap_module.KernelExplainer.return_value = mock_explainer_instance
         mock_shap_module.Explanation = MagicMock()
         return mock_shap_module
 
+    def _make_phase2b_batches(self, n_bg: int = 10, n_test: int = 5) -> tuple:
+        """Create background and test batch dicts with Phase 2B feature shapes.
+
+        Phase 2B: fluid is [ptau217, nfl_plasma] — 2 features.
+        Uses direct tensor construction to avoid dependency on old 6-feature
+        generate_synthetic_adni which predates the leakage fix.
+
+        Args:
+            n_bg: Background batch size.
+            n_test: Test batch size.
+
+        Returns:
+            Tuple of (bg_batches, test_batches) where each is a list with one dict.
+        """
+        bg_batch = {
+            "fluid": torch.zeros(n_bg, 2),
+            "acoustic": torch.zeros(n_bg, 12),
+            "motor": torch.randn(n_bg, 8),
+            "clinical": torch.zeros(n_bg, 10),
+        }
+        test_batch = {
+            "fluid": torch.zeros(n_test, 2),
+            "acoustic": torch.zeros(n_test, 12),
+            "motor": torch.randn(n_test, 8),
+            "clinical": torch.zeros(n_test, 10),
+        }
+        return [bg_batch], [test_batch]
+
     def test_explain_returns_correct_shap_shape(self) -> None:
-        """Test 11: explain returns shap_values with shape [n_samples, 36]."""
+        """Test 11: explain returns shap_values with shape [n_samples, 32]."""
         import sys
-        import importlib
         from src.models.neurofusion_model import NeuroFusionAD
-        from src.data.dataset import generate_synthetic_adni
-        from torch.utils.data import DataLoader
 
-        # Build a small dataset
-        dataset = generate_synthetic_adni(n_samples=30, seed=99)
-        bg_loader = DataLoader(dataset, batch_size=10)
-        bg_batches = [next(iter(bg_loader))]
-
-        test_loader = DataLoader(dataset, batch_size=5)
-        test_batches = [next(iter(test_loader))]
+        bg_batches, test_batches = self._make_phase2b_batches(n_bg=10, n_test=5)
 
         model = NeuroFusionAD()
         model.eval()
@@ -644,21 +663,16 @@ class TestSHAPExplainer:
 
         assert "shap_values" in results, "explain() must return 'shap_values' key"
         shap_vals = results["shap_values"]
-        assert shap_vals.shape == (n_explain, 36), (
-            f"Expected shap_values shape ({n_explain}, 36), got {shap_vals.shape}"
-        )
+        assert shap_vals.shape == (n_explain, 32), (
+            f"Expected shap_values shape ({n_explain}, 32), got {shap_vals.shape}"
+        )  # Phase 2B: fluid dim=2, total=2+12+8+10=32
 
     def test_explain_returns_feature_names(self) -> None:
-        """Test 11b: explain returns list of 36 feature names."""
+        """Test 11b: explain returns list of 32 feature names."""
         import sys
         from src.models.neurofusion_model import NeuroFusionAD
-        from src.data.dataset import generate_synthetic_adni
-        from torch.utils.data import DataLoader
 
-        dataset = generate_synthetic_adni(n_samples=20, seed=88)
-        bg_loader = DataLoader(dataset, batch_size=10)
-        bg_batches = [next(iter(bg_loader))]
-        test_batches = [next(iter(DataLoader(dataset, batch_size=5)))]
+        bg_batches, test_batches = self._make_phase2b_batches(n_bg=10, n_test=5)
 
         model = NeuroFusionAD()
         model.eval()
@@ -684,9 +698,9 @@ class TestSHAPExplainer:
                 del sys.modules["src.evaluation.shap_explainability"]
 
         feature_names = results["feature_names"]
-        assert len(feature_names) == 36, (
-            f"Expected 36 feature names, got {len(feature_names)}"
-        )
+        assert len(feature_names) == 32, (
+            f"Expected 32 feature names, got {len(feature_names)}"
+        )  # Phase 2B: fluid dim=2, total=2+12+8+10=32
         assert all(isinstance(fn, str) for fn in feature_names), (
             "All feature names must be strings"
         )

@@ -33,7 +33,7 @@ from src.models.encoders import (
 # Shared constants
 # ---------------------------------------------------------------------------
 BATCH_SIZE = 4
-EXPECTED_OUTPUT_DIM = 768
+EXPECTED_OUTPUT_DIM = 256  # Phase 2B: reduced from 768 to 256
 
 
 # ---------------------------------------------------------------------------
@@ -45,21 +45,17 @@ EXPECTED_OUTPUT_DIM = 768
 def _make_fluid_valid(batch_size: int = BATCH_SIZE) -> torch.Tensor:
     """Return a valid FluidBiomarkerEncoder input tensor using pure torch.
 
-    Six biomarker values are set to physiologically plausible mid-range values:
+    Phase 2B: fluid encoder takes 2 plasma biomarkers only (ABETA42_CSF removed).
         index 0 — pTau-217 = 10.0 pg/mL   (range 0.1–100)
-        index 1 — Abeta42/40 = 0.15        (range 0.01–0.30)
-        index 2 — NfL = 50.0 pg/mL         (range 5–200)
-        index 3 — GFAP = 100.0 pg/mL       (unconstrained)
-        index 4 — total-tau = 200.0 pg/mL  (unconstrained)
-        index 5 — Abeta42 = 800.0 pg/mL    (unconstrained)
+        index 1 — NfL = 50.0 pg/mL         (range 5–200)
 
     Args:
         batch_size: Number of samples in the batch.
 
     Returns:
-        Float32 tensor of shape [batch_size, 6].
+        Float32 tensor of shape [batch_size, 2].
     """
-    row = torch.tensor([10.0, 0.15, 50.0, 100.0, 200.0, 800.0], dtype=torch.float32)
+    row = torch.tensor([10.0, 50.0], dtype=torch.float32)
     return row.unsqueeze(0).expand(batch_size, -1).clone()
 
 
@@ -206,37 +202,24 @@ class TestFluidBiomarkerEncoder:
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
-    def test_fluid_normalized_negative_abeta_accepted(
+    def test_fluid_normalized_negative_nfl_accepted(
         self, encoder: FluidBiomarkerEncoder
     ) -> None:
-        """Normalized negative Abeta ratio accepted (would be invalid raw).
+        """Normalized negative NfL accepted (would be invalid raw).
+
+        Phase 2B: index 1 is NFL_PLASMA (was Abeta42/40 in Phase 2).
 
         Args:
             encoder: FluidBiomarkerEncoder fixture.
         """
         x = _make_fluid_valid()
-        x[:, 1] = -0.5
+        x[:, 1] = -0.7  # normalized value below raw minimum; accepted
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
-
-    def test_fluid_normalized_nfl_accepted(
-        self, encoder: FluidBiomarkerEncoder
-    ) -> None:
-        """Normalized NfL below raw minimum accepted by encoder.
-
-        Args:
-            encoder: FluidBiomarkerEncoder fixture.
-        """
-        x = _make_fluid_valid()
-        x[:, 2] = -0.7
-        import torch as _t
-        with _t.no_grad():
-            out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
     def test_fluid_nan_input_raises(self, encoder: FluidBiomarkerEncoder) -> None:
         """NaN in any feature must raise ValueError.
@@ -245,7 +228,7 @@ class TestFluidBiomarkerEncoder:
             encoder: FluidBiomarkerEncoder fixture.
         """
         x = _make_fluid_valid()
-        x[0, 3] = float("nan")
+        x[0, 0] = float("nan")
         with pytest.raises(ValueError, match="NaN"):
             encoder(x)
 
@@ -263,22 +246,22 @@ class TestFluidBiomarkerEncoder:
     def test_fluid_boundary_values(self, encoder: FluidBiomarkerEncoder) -> None:
         """Exact boundary values (min and max) must be accepted without error.
 
+        Phase 2B: fluid has 2 features — PTAU217 (index 0) and NFL_PLASMA (index 1).
+
         Args:
             encoder: FluidBiomarkerEncoder fixture.
         """
         x = _make_fluid_valid()
         # Exact lower bounds
         x[:, 0] = 0.1    # pTau-217 min
-        x[:, 1] = 0.01   # Abeta42/40 min
-        x[:, 2] = 5.0    # NfL min
+        x[:, 1] = 5.0    # NfL min
         with torch.no_grad():
             out_low = encoder(x)
         assert not torch.isnan(out_low).any()
 
         # Exact upper bounds
         x[:, 0] = 100.0  # pTau-217 max
-        x[:, 1] = 0.30   # Abeta42/40 max
-        x[:, 2] = 200.0  # NfL max
+        x[:, 1] = 200.0  # NfL max
         with torch.no_grad():
             out_high = encoder(x)
         assert not torch.isnan(out_high).any()
@@ -354,7 +337,7 @@ class TestDigitalAcousticEncoder:
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
     def test_acoustic_normalized_shimmer_accepted(
         self, encoder: DigitalAcousticEncoder
@@ -369,7 +352,7 @@ class TestDigitalAcousticEncoder:
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
     def test_acoustic_nan_input_raises(self, encoder: DigitalAcousticEncoder) -> None:
         """NaN in any feature must raise ValueError.
@@ -575,7 +558,7 @@ class TestClinicalDemographicEncoder:
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
     def test_clinical_negative_normalized_mmse_accepted(
         self, encoder: ClinicalDemographicEncoder
@@ -590,7 +573,7 @@ class TestClinicalDemographicEncoder:
         import torch as _t
         with _t.no_grad():
             out = encoder(x)
-        assert out.shape[-1] == 768
+        assert out.shape[-1] == 256
 
     def test_clinical_nan_input_raises(
         self, encoder: ClinicalDemographicEncoder

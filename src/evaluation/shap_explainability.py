@@ -5,15 +5,15 @@ KernelExplainer is model-agnostic and provides SHAP values that are
 independent of the model's internal implementation, which is required for
 SaMD submissions per FDA AI/ML guidance.
 
-Feature layout (36 total input features):
-    fluid[0-5]:    ptau217, abeta42_40_ratio, nfl_plasma, gfap_plasma,
-                   ptau181_csf, abeta42_csf
+Feature layout (32 total input features, Phase 2B):
+    fluid[0-1]:    ptau217, nfl_plasma
+                   (ABETA42_CSF removed — label source, Phase 2B leakage fix)
     acoustic[0-11]: jitter, shimmer, hnr, f0_mean, f0_std, mfcc1-7
     motor[0-7]:    tremor_freq, tremor_amp, bradykinesia, spiral_rmse,
                    tapping_cv, tapping_asym, grip_mean, grip_cv
     clinical[0-9]: age, sex, education, mmse_baseline, apoe4, tau_csf,
                    abeta42_plasma, abeta40_plasma, ptau_tau_ratio,
-                   abeta_ptau_ratio
+                   abeta4240_plasma_ratio
 
 IEC 62304 compliance:
     - No PHI logged; patient IDs must be hashed before passing.
@@ -42,16 +42,16 @@ try:
 except ImportError:
     shap = None  # type: ignore[assignment]
 
-# Feature dimension splits
-FLUID_DIM = 6
+# Feature dimension splits — Phase 2B: FLUID_DIM reduced from 6 to 2
+FLUID_DIM = 2
 ACOUSTIC_DIM = 12
 MOTOR_DIM = 8
 CLINICAL_DIM = 10
-TOTAL_FEATURES = FLUID_DIM + ACOUSTIC_DIM + MOTOR_DIM + CLINICAL_DIM  # 36
+TOTAL_FEATURES = FLUID_DIM + ACOUSTIC_DIM + MOTOR_DIM + CLINICAL_DIM  # 32
 
 FLUID_FEATURE_NAMES = [
-    "ptau217", "abeta42_40_ratio", "nfl_plasma", "gfap_plasma",
-    "ptau181_csf", "abeta42_csf",
+    "ptau217", "nfl_plasma",
+    # ABETA42_CSF removed (label source — Phase 2B leakage fix)
 ]
 ACOUSTIC_FEATURE_NAMES = [
     "jitter", "shimmer", "hnr", "f0_mean", "f0_std",
@@ -63,7 +63,7 @@ MOTOR_FEATURE_NAMES = [
 ]
 CLINICAL_FEATURE_NAMES = [
     "age", "sex", "education", "mmse_baseline", "apoe4", "tau_csf",
-    "abeta42_plasma", "abeta40_plasma", "ptau_tau_ratio", "abeta_ptau_ratio",
+    "abeta42_plasma", "abeta40_plasma", "ptau_tau_ratio", "abeta4240_plasma_ratio",
 ]
 
 ALL_FEATURE_NAMES = (
@@ -83,20 +83,20 @@ class NeuralFusionSHAPExplainer:
 
     The model expects a batch dict, but KernelExplainer expects a numpy
     array. An internal wrapper function handles the conversion:
-        - Input: numpy array [n, 36]
-        - Split into fluid[6], acoustic[12], motor[8], clinical[10]
+        - Input: numpy array [n, 32]  # Phase 2B: fluid=2, acoustic=12, motor=8, clinical=10
+        - Split into fluid[2], acoustic[12], motor[8], clinical[10]
         - Create batch dict, run model forward
         - Return amyloid probability as numpy array [n]
 
     Attributes:
         model: NeuroFusionAD instance (set to eval mode).
         device: Torch device string ('cpu' or 'cuda').
-        feature_names: List of 36 feature name strings.
+        feature_names: List of 32 feature name strings (Phase 2B).
 
     Example:
         >>> explainer = NeuralFusionSHAPExplainer(model, background_data)
         >>> results = explainer.explain(test_samples, n_samples=20)
-        >>> print(results['shap_values'].shape)  # (20, 36)
+        >>> print(results['shap_values'].shape)  # (20, 32)
     """
 
     def __init__(
@@ -154,7 +154,7 @@ class NeuralFusionSHAPExplainer:
         O(N²) patient similarity graph construction.
 
         Args:
-            X: numpy array of shape [n, 36] with concatenated features.
+            X: numpy array of shape [n, 32] with concatenated features (Phase 2B).
 
         Returns:
             Amyloid probabilities as numpy array of shape [n].
@@ -213,8 +213,8 @@ class NeuralFusionSHAPExplainer:
         Returns:
             Dict with:
                 {
-                    'shap_values': ndarray[n, 36],
-                    'feature_names': list[str] (36 feature names),
+                    'shap_values': ndarray[n, 32],
+                    'feature_names': list[str] (32 feature names),
                     'base_value': float,
                     'predictions': ndarray[n] (amyloid probabilities),
                 }
@@ -345,7 +345,7 @@ class NeuralFusionSHAPExplainer:
         )
 
     def _batches_to_numpy(self, batches: list) -> np.ndarray:
-        """Flatten list of batch dicts into a numpy array of shape [N, 36].
+        """Flatten list of batch dicts into a numpy array of shape [N, 32] (Phase 2B).
 
         Args:
             batches: List of batch dicts with keys 'fluid', 'acoustic',
@@ -353,7 +353,7 @@ class NeuralFusionSHAPExplainer:
                 Each dict may contain a batch of samples.
 
         Returns:
-            numpy array of shape [N, 36] with concatenated features.
+            numpy array of shape [N, 32] with concatenated features (Phase 2B).
         """
         rows = []
         for batch in batches:
