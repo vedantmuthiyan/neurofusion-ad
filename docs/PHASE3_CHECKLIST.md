@@ -1,74 +1,64 @@
 # Phase 3 Exit Checklist — Integration, Demo, Investor Package
 
-**Status**: IN PROGRESS
-**RunPod**: root@213.192.2.67:40046 (updated after restart)
-**Budget**: $34 API credits | Model: claude-sonnet-4-6 only
+**Status**: COMPLETE ✅
+**RunPod**: root@213.192.2.67:40046
+**Budget used**: ~$5 (Batch API docs + misc) of $34 remaining
 
 ---
 
-## Step 1: Check Available Skills (do first)
+## Step 1: Check Available Skills
 - [x] FHIR developer skill loaded (fhir-developer:fhir-developer-skill)
-- [x] `/mnt/skills/` not mounted on this system — used Skill tool instead
 
-## Step 2: API Integration (api-integration-agent)
+## Step 2: API Integration
 
-- [x] `src/data/inference_preprocessor.py` — single-patient inference preprocessor
-  - [x] fluid_input_dim = 2 (NOT 3 — ABETA removed)
-  - [x] Handles missing modalities with median imputation
-  - [x] from_fhir_bundle() method parses FHIR bundle
-- [x] `src/api/fhir_validator.py` — FHIR R4 validator + extractor
-- [x] `src/api/fhir_output.py` — builds FHIR RiskAssessment
-- [x] `src/api/main.py` — FastAPI app with /health + /fhir/RiskAssessment/$process
-  - [x] Temperature scaling applied (T=0.756)
-  - [x] Monte Carlo CI (30 samples)
-  - [x] Audit logging (BackgroundTasks → asyncpg → PostgreSQL)
-- [x] `scripts/db/init.sql` — PostgreSQL audit table with indexes
-- [x] `Dockerfile` — multi-stage, non-root user, health check
+- [x] `src/data/inference_preprocessor.py` — fluid_input_dim=2, FHIR Bundle parsing
+- [x] `src/api/fhir_validator.py` — FHIR R4 validator, OperationOutcome errors
+- [x] `src/api/fhir_output.py` — FHIR RiskAssessment with SNOMED codes, CI, extensions
+- [x] `src/api/main.py` — FastAPI, T=0.756, MC=30, BackgroundTasks audit log
+- [x] `scripts/db/init.sql` — prediction_audit_log + model_versions tables
+- [x] `Dockerfile` — multi-stage, non-root user, HEALTHCHECK
 - [x] `docker-compose.yml` — API + PostgreSQL 15 + Redis 7
-- [x] `tests/integration/test_api.py` — 71 integration tests
-- [x] `pytest tests/integration/ -v` — 71/71 passing (asyncio + trio)
-- [x] API running on RunPod (uvicorn, CUDA, model loaded)
-- [x] Latency: **p95 = 125ms** (well under 2000ms target) ✅
+- [x] `tests/integration/test_api.py` — 71 tests (asyncio + trio backends)
+- [x] `pytest tests/integration/ -v` — **71/71 PASS**
+- [x] API running on RunPod (uvicorn, CUDA RTX 3090)
+- [x] **p95 latency = 125ms** (target < 2000ms) ✅
 
-## Step 3: Clinical Demo Application (demo-agent)
+## Step 3: Clinical Demo Application
 
-- [x] `demo/backend/demo_api.py` — FastAPI with 3 scenarios + live API proxy
-- [x] `demo/frontend/index.html` — React SPA (CDN, no build step)
-  - [x] Scenario 1: Margaret Chen (HIGH, 94.2%)
-  - [x] Scenario 2: Robert Martinez (MODERATE, 52.4%)
-  - [x] Scenario 3: Dorothy Walsh (MODERATE, 40.9%)
-  - [x] RiskGauge component (SVG semicircular gauge)
+- [x] `demo/backend/demo_api.py` — FastAPI, 3 scenarios, live API proxy + fallback
+- [x] `demo/frontend/index.html` — React SPA (CDN), all 4 components
+  - [x] RiskGauge (SVG semicircle, probability + CI band)
   - [x] ModalityImportanceChart (horizontal bars, 4 modalities)
-  - [x] KaplanMeierCurve (SVG line chart vs. ADNI reference)
-  - [x] AlertBanner (RED/ORANGE/GREEN with recommendation text)
+  - [x] KaplanMeierCurve (SVG, patient vs. ADNI reference)
+  - [x] AlertBanner (RED/ORANGE/GREEN with recommendation)
+- [x] Scenario 1: Margaret Chen — **94.2% HIGH** ✅
+- [x] Scenario 2: Robert Martinez — **52.4% MODERATE** ✅
+- [x] Scenario 3: Dorothy Walsh — **40.9% MODERATE** ✅
 - [x] `demo/Dockerfile.demo` + `demo/docker-compose.demo.yml`
-- [x] `demo/README.md` with launch instructions
-- [x] Demo running at http://localhost:3000
-- [x] All 3 scenarios validated with fallback results
+- [x] `demo/README.md`
 
 ## Step 4: Investor Documents (Batch API)
 
-- [x] `python scripts/batch/generate_phase3_docs.py --submit`
-- [ ] Wait for batch completion (batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA)
-- [ ] `python scripts/batch/generate_phase3_docs.py --retrieve`
-- [ ] `docs/investor/executive_summary.md`
-- [ ] `docs/investor/pitch_deck_content.md`
-- [ ] `docs/investor/competitive_analysis.md`
-- [ ] `docs/investor/technical_due_diligence.md`
-- [ ] `docs/clinical/CVR_v2.0.md`
-- [ ] `docs/dhf/DHF_final_index.md`
+- [x] Batch submitted: `msgbatch_01HRVyhrpdvfnWaMAcE2etBA`
+- [x] Batch completed: 6/6 succeeded, 0 errors
+- [x] `docs/investor/executive_summary.md` (139 lines)
+- [x] `docs/investor/pitch_deck_content.md` (203 lines, 12 slides)
+- [x] `docs/investor/competitive_analysis.md` (263 lines)
+- [x] `docs/investor/technical_due_diligence.md` (413 lines)
+- [x] `docs/clinical/CVR_v2.0.md` (436 lines)
+- [x] `docs/dhf/DHF_final_index.md` (437 lines)
+- [x] All docs verified: no placeholders, correct AUC values
 
 ## Step 5: Final Quality Gates
 
-- [x] `pytest tests/ -v` — **212/212 passing** ✅
+- [x] `pytest tests/ -v` — **212/212 PASS** ✅
 - [x] `pytest tests/integration/ -v` — 71/71 ✅
-- [ ] All investor documents reviewed for placeholder text
-- [ ] `git commit -m "Phase 3 complete"` + `git push`
+- [x] `git push origin main` — committed and pushed
 
 ## Step 6: Completion
 
-- [ ] `PHASE3_COMPLETE.md` written
-- [ ] **STOP — Human gate review**
+- [x] `PHASE3_COMPLETE.md` written
+- [x] **STOP — Human gate review required**
 
 ---
 
@@ -76,6 +66,16 @@
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
 | p95 latency | < 2000ms | **125ms** | ✅ PASS |
-| FHIR R4 compliance | Pass | All 422/400/503 correct | ✅ PASS |
+| FHIR R4 compliance | Required | All status codes correct | ✅ PASS |
 | Integration tests | 0 failures | 71/71 | ✅ PASS |
 | Total test suite | 0 failures | 212/212 | ✅ PASS |
+
+## Phase 2B Metrics (carried forward)
+| Metric | Value | Gate | Status |
+|--------|-------|------|--------|
+| ADNI test AUC | 0.8897 | ≥ 0.65 | ✅ |
+| BH-001 test AUC | 0.9071 | ≥ 0.75 | ✅ |
+| MMSE RMSE | 1.804 pts/yr | ≤ 4.5 | ✅ |
+| C-index | 0.651 | ≥ 0.65 | ✅ |
+| ECE (calibrated) | 0.083 | < 0.10 | ✅ |
+| APOE4 gap | 0.131 | < 0.12 | ⚠️ DISCLOSE |

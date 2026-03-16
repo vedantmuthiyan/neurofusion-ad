@@ -342,11 +342,11 @@ def retrieve_docs():
             header = (f"---\ndocument: {result.custom_id}\n"
                       f"generated: {datetime.now().strftime('%Y-%m-%d')}\n"
                       f"batch_id: {batch_id}\nstatus: DRAFT\n---\n\n")
-            out.write_text(header + content)
-            print(f"✅ {out}")
+            out.write_text(header + content, encoding="utf-8")
+            print(f"[OK] {out}")
             saved += 1
         else:
-            print(f"❌ {result.custom_id}: {result.result.error}")
+            print(f"[ERROR] {result.custom_id}: {result.result.error}")
             errors += 1
     print(f"\nSaved {saved} documents. Review before sharing with investors.")
 
