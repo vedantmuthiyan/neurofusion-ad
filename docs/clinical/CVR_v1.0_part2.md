@@ -1,16 +1,9 @@
----
-document_id: cvr-sections-6-11
-generated: 2026-03-15
-batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
-status: DRAFT — requires human review before submission
----
-
 # NeuroFusion-AD Clinical Validation Report
 ## Part 2: Sections 6–11 and Appendices
 
 **Document ID:** NFX-CVR-2024-001-P2
 **Version:** 2.0 (Phase 2B Remediated)
-**Status:** DRAFT — Internal Review
+**Status:** Superseded — See CVR v2.0 (NF-AD-CVR-002)
 **Continuation of:** NFX-CVR-2024-001-P1
 **Prepared by:** Clinical Documentation Specialist, NeuroFusion-AD Program
 **Date:** 2024

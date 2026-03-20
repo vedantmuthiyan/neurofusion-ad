@@ -1,10 +1,3 @@
----
-document_id: dhf-phase2
-generated: 2026-03-15
-batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
-status: DRAFT — requires human review before submission
----
-
 # NeuroFusion-AD Design History File
 ## Phase 2 Software Development Record
 

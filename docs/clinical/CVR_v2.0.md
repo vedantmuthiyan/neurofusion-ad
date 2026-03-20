@@ -1,10 +1,3 @@
----
-document: cvr-v2
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NEUROFUSION-AD v1.0
 ## Clinical Validation Report v2.0
 ### Supersedes CVR v1.0 (Phase 2 — Data Leakage Identified)

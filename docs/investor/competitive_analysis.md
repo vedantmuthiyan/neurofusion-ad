@@ -1,10 +1,3 @@
----
-document: competitive-analysis
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NeuroFusion-AD v1.0 — Competitive Analysis
 
 ### Prepared for Investor Due Diligence & Roche Information Solutions Acquisition Review

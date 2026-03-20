@@ -1,10 +1,3 @@
----
-document: dhf-final
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NeuroFusion-AD v1.0 — Design History File (DHF) Final Index
 
 **Document ID:** NFU-AD-DHF-IDX-001

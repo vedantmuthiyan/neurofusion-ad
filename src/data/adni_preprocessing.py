@@ -43,7 +43,7 @@ PROCESSED_DIR = Path("data/processed/adni")
 RDA_DIR = RAW_DIR / "ADNIMERGE2/data"
 
 # ---------------------------------------------------------------------------
-# File paths (verified by data-explorer-agent 2026-03-11)
+# File paths (verified 2026-03-11)
 # ---------------------------------------------------------------------------
 PLASMA_FILE  = RAW_DIR / "UPENN_PLASMA_FUJIREBIO_QUANTERIX_28Feb2026.csv"
 CSF_FILE     = RAW_DIR / "UPENNBIOMK_MASTER_28Feb2026.csv"

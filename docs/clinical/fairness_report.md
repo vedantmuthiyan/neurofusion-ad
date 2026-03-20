@@ -1,10 +1,3 @@
----
-document_id: fairness-report
-generated: 2026-03-15
-batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
-status: DRAFT — requires human review before submission
----
-
 # FAIR-001 v1.0
 ## Fairness and Bias Analysis Report
 ### NeuroFusion-AD — Clinical Decision Support (SaMD)

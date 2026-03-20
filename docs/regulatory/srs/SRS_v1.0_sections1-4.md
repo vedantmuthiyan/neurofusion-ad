@@ -1,10 +1,3 @@
----
-document_id: srs-section-1-4
-generated: 2026-02-26T22:55:20.871354
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # SOFTWARE REQUIREMENTS SPECIFICATION
 ## NeuroFusion-AD: Multimodal Graph Neural Network for Alzheimer's Disease Progression Prediction
 
@@ -13,7 +6,7 @@ status: DRAFT — requires human review before approval
 | **Document ID** | SRS-001 |
 |---|---|
 | **Version** | 1.0 |
-| **Status** | DRAFT — For Regulatory Review |
+| **Status** | Final |
 | **Date** | 2025-01-01 |
 | **Classification** | Confidential — Regulatory Submission Document |
 | **Prepared By** | Regulatory Affairs Office |

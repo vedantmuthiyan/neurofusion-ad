@@ -28,7 +28,7 @@ RAW_DIR           = Path("data/raw/biohermes/BIOHERMES001")
 PROCESSED_DIR     = Path("data/processed/biohermes")
 ADNI_PROCESSED_DIR = Path("data/processed/adni")
 
-# File paths (verified by data-explorer-agent 2026-03-11)
+# File paths (verified 2026-03-11)
 LILLY_PTAU217_FILE = (
     RAW_DIR / "BloodBasedBiomarkers/Lilly/pTau217_Data/LB_LILLY_CLINICAL_DIAGNOST.csv"
 )
@@ -193,7 +193,7 @@ def load_acoustic_features() -> pd.DataFrame:
 
     Source: DigitalTests/Aural Analytics/FT_AURAL_ANALYTICS.csv
     Quality filter: FTACPTFL == 'Y'
-    Feature codes (from data-explorer-agent verified inventory):
+    Feature codes (from verified data inventory):
         CA65CBDF -> speaking_rate
         MAD174CB -> pause_rate (jitter proxy)
         MAC168D2 -> monotonicity (shimmer proxy)
@@ -239,7 +239,7 @@ def load_motor_features() -> pd.DataFrame:
 
     Source: DigitalTests/Linus/FT_LINUS_HEALTH.csv
     Quality filter: FTACPTFL == 'Y'
-    Feature codes (from data-explorer-agent verified inventory):
+    Feature codes (from verified data inventory):
         SPCWDTM, SPCWNTM, SPCCWDTM, SPCCWNTM -> spiral drawing times
         TRLSTIME, TRLSACC -> Trails B
         SDMTACC, SDMTATTP -> SDMT

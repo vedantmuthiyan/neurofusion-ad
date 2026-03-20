@@ -1,10 +1,3 @@
----
-document_id: rmf-hazard-analysis
-generated: 2026-02-26T22:55:20.891358
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # RISK MANAGEMENT FILE
 
 ## NeuroFusion-AD: Multimodal GNN for Alzheimer's Disease Progression Prediction

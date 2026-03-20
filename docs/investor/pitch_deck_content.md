@@ -1,10 +1,3 @@
----
-document: pitch-deck-content
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NeuroFusion-AD: Investor Pitch Deck — Narrative Content
 ## 12-Slide Script for Series A / Strategic Acquisition Presentation
 

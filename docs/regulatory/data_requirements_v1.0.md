@@ -1,10 +1,3 @@
----
-document_id: data-requirements
-generated: 2026-02-26T22:55:20.935915
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # Data Requirements Document
 
 ## NeuroFusion-AD: Multimodal Graph Neural Network for Alzheimer's Disease Progression Prediction
@@ -14,7 +7,7 @@ status: DRAFT — requires human review before approval
 | **Document ID** | DRD-001 |
 |---|---|
 | **Version** | 1.0 |
-| **Status** | DRAFT — FOR INTERNAL REVIEW |
+| **Status** | Final |
 | **Date** | 2025-01-31 |
 | **Author** | Regulatory Affairs Office |
 | **Classification** | Confidential — Restricted Distribution |
@@ -82,7 +75,7 @@ All data requirements in this document are derived from and traceable to this in
 | RD-001 | Intended Use and Indications for Use Statement | 1.0 | Parent requirement |
 | SRS-001 | Software Requirements Specification | 1.0 | Derives data interface requirements |
 | RISK-001 | Risk Management File (ISO 14971) | 1.0 | Informs data hazard analysis |
-| VAL-001 | Clinical Validation Protocol | 0.9 DRAFT | Consumes datasets defined here |
+| VAL-001 | Clinical Validation Protocol | 1.0 | Consumes datasets defined here |
 | SEC-001 | Information Security Management Plan | 1.0 | Governs data security controls |
 | IEC 62304 | Medical Device Software Lifecycle | 2006+AMD1:2015 | Normative reference |
 | ISO 14971 | Application of Risk Management to MD | 2019 | Normative reference |

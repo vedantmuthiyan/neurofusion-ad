@@ -1,10 +1,3 @@
----
-document: technical-due-diligence
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NeuroFusion-AD v1.0 — Technical Due Diligence Document
 
 **Prepared for:** Roche Information Solutions / Navify Algorithm Suite Technical Review Team

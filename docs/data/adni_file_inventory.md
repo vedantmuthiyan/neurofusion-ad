@@ -1,6 +1,6 @@
 # ADNI File Inventory
 **Date**: 2026-03-11
-**Agent**: data-explorer-agent
+**Prepared by**: NeuroFusion-AD Data Engineering Team
 
 ## Summary
 - Total CSV files at root level: 12

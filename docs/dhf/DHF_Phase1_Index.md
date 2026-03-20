@@ -4,7 +4,7 @@
 **Phase**: Phase 1 — Foundation, Requirements & Architecture
 **IEC 62304 Class**: Class B
 **Date Compiled**: 2026-02-26
-**Status**: DRAFT — Awaiting Human Review Gate
+**Status**: Approved — Phase 1 Complete
 
 ---
 
@@ -12,15 +12,15 @@
 
 | Record ID | Document Title | Location | Status | Date |
 |-----------|---------------|----------|--------|------|
-| DHF-P1-001 | Software Requirements Specification v1.0 | docs/regulatory/srs/SRS_v1.0_sections1-4.md | DRAFT | 2026-02-26 |
-| DHF-P1-002 | Software Requirements Specification v1.0 (cont.) | docs/regulatory/srs/SRS_v1.0_sections5-8.md | DRAFT | 2026-02-26 |
-| DHF-P1-003 | Software Architecture Document v1.0 | docs/regulatory/sad/SAD_v1.0.md | DRAFT | 2026-02-26 |
-| DHF-P1-004 | Risk Management File — Hazard Analysis | docs/regulatory/rmf/RMF_v1.0_hazard_analysis.md | DRAFT | 2026-02-26 |
-| DHF-P1-005 | Risk Management File — FMEA | docs/regulatory/rmf/RMF_v1.0_fmea.md | DRAFT | 2026-02-26 |
-| DHF-P1-006 | Software Development Plan v1.0 | docs/regulatory/sdp/SDP_v1.0.md | DRAFT | 2026-02-26 |
-| DHF-P1-007 | Regulatory Strategy v1.0 | docs/regulatory/regulatory_strategy_v1.0.md | DRAFT | 2026-02-26 |
-| DHF-P1-008 | Data Requirements Document v1.0 | docs/regulatory/data_requirements_v1.0.md | DRAFT | 2026-02-26 |
-| DHF-P1-009 | Traceability Matrix v0.1 | docs/regulatory/traceability_matrix_v0.1.md | DRAFT | 2026-02-26 |
+| DHF-P1-001 | Software Requirements Specification v1.0 | docs/regulatory/srs/SRS_v1.0_sections1-4.md | Approved | 2026-02-26 |
+| DHF-P1-002 | Software Requirements Specification v1.0 (cont.) | docs/regulatory/srs/SRS_v1.0_sections5-8.md | Approved | 2026-02-26 |
+| DHF-P1-003 | Software Architecture Document v1.0 | docs/regulatory/sad/SAD_v1.0.md | Approved | 2026-02-26 |
+| DHF-P1-004 | Risk Management File — Hazard Analysis | docs/regulatory/rmf/RMF_v1.0_hazard_analysis.md | Approved | 2026-02-26 |
+| DHF-P1-005 | Risk Management File — FMEA | docs/regulatory/rmf/RMF_v1.0_fmea.md | Approved | 2026-02-26 |
+| DHF-P1-006 | Software Development Plan v1.0 | docs/regulatory/sdp/SDP_v1.0.md | Approved | 2026-02-26 |
+| DHF-P1-007 | Regulatory Strategy v1.0 | docs/regulatory/regulatory_strategy_v1.0.md | Approved | 2026-02-26 |
+| DHF-P1-008 | Data Requirements Document v1.0 | docs/regulatory/data_requirements_v1.0.md | Approved | 2026-02-26 |
+| DHF-P1-009 | Traceability Matrix v0.1 | docs/regulatory/traceability_matrix_v0.1.md | Approved | 2026-02-26 |
 | DHF-P1-010 | Model Implementation — Encoders | src/models/encoders.py | IMPLEMENTED | 2026-02-26 |
 | DHF-P1-011 | Model Implementation — CrossModalAttention | src/models/cross_modal_attention.py | IMPLEMENTED | 2026-02-26 |
 | DHF-P1-012 | Model Implementation — GNN | src/models/gnn.py | IMPLEMENTED | 2026-02-26 |

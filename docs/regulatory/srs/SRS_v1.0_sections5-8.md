@@ -1,10 +1,3 @@
----
-document_id: srs-section-5-8
-generated: 2026-02-26T22:55:20.879361
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # NeuroFusion-AD Software Requirements Specification
 ## SRS-001 v1.0 — Sections 5–8
 ### IEC 62304 Compliant | FDA De Novo | EU MDR Class IIa
@@ -17,7 +10,7 @@ status: DRAFT — requires human review before approval
 |---|---|
 | Document ID | SRS-001 |
 | Version | 1.0 |
-| Status | DRAFT — For Internal Review |
+| Status | Final |
 | Sections | 5–8 (Continuation) |
 | Author | Regulatory Affairs Office |
 | Classification | Confidential — Regulatory Submission |

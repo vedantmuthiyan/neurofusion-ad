@@ -1,10 +1,3 @@
----
-document: executive-summary
-generated: 2026-03-16
-batch_id: msgbatch_01HRVyhrpdvfnWaMAcE2etBA
-status: DRAFT
----
-
 # NeuroFusion-AD v1.0
 ## Executive Summary — Confidential | Roche Information Solutions Business Development
 

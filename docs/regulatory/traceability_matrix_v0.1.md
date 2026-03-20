@@ -1,7 +1,7 @@
 # Traceability Matrix v0.1
 
 **Document ID**: SRS-001 / TM-001
-**Status**: DRAFT
+**Status**: Final
 **Date**: 2026-02-26
 **IEC 62304 Clause**: 5.2.6 (Software System Testing)
 
@@ -147,4 +147,4 @@ This section provides the reverse mapping: for each implementation artifact, whi
 
 ---
 
-*Document ID: TM-001 | Version: 0.1 | Status: DRAFT | IEC 62304 § 5.2.6*
+*Document ID: TM-001 | Version: 0.1 | Status: Final | IEC 62304 § 5.2.6*

@@ -1,10 +1,3 @@
----
-document_id: fmea-component-analysis
-generated: 2026-02-26T22:55:20.900378
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # NeuroFusion-AD Failure Mode and Effects Analysis (FMEA)
 
 ## Risk Management Document: RMF-001-FMEA-v1.0

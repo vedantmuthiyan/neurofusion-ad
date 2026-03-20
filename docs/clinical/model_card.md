@@ -1,10 +1,3 @@
----
-document_id: model-card
-generated: 2026-03-15
-batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
-status: DRAFT — requires human review before submission
----
-
 # NeuroFusion-AD Model Card
 
 **Version:** 2.0 (Phase 2B Remediated)

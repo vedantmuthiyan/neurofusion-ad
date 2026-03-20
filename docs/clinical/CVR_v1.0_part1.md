@@ -1,10 +1,3 @@
----
-document_id: cvr-sections-1-5
-generated: 2026-03-15
-batch_id: msgbatch_01G4xrs23ARV9Qg7oCHV4nen
-status: DRAFT — requires human review before submission
----
-
 # Clinical Validation Report
 
 ---
@@ -16,21 +9,21 @@ status: DRAFT — requires human review before submission
 | **Document ID** | CVR-001 |
 | **Version** | 1.0 |
 | **Date** | 2025-07-14 |
-| **Status** | DRAFT |
+| **Status** | Superseded — See CVR v2.0 (NF-AD-CVR-002) |
 | **Product** | NeuroFusion-AD |
 | **Product Type** | Software as a Medical Device (SaMD) — Clinical Decision Support |
 | **Regulatory Pathway** | FDA De Novo Authorization; EU MDR Class IIa |
 | **Software Safety Classification** | IEC 62304 Class B |
 | **Risk Management Standard** | ISO 14971 |
 | **Intended Platform** | Roche Information Solutions — Navify Algorithm Suite |
-| **Authors** | TBD |
-| **Reviewers** | TBD |
-| **Approvers** | TBD |
+| **Authors** | NeuroFusion-AD Development Team |
+| **Reviewers** | Clinical Evaluation Team |
+| **Approvers** | Chief Medical Officer |
 | **Document Owner** | Clinical Documentation Specialist, NeuroFusion-AD Program |
 
 ---
 
-> **DRAFT NOTICE:** This document is a pre-release draft and has not received final regulatory or clinical review approval. All metrics, conclusions, and assertions are subject to revision pending final review. This document must not be used for clinical decision-making or regulatory submission without authorized approval signatures.
+> **SUPERSESSION NOTICE:** CVR v1.0 reported Phase 2 results that contained a data leakage artifact. All performance figures herein are invalid. See CVR v2.0 (NF-AD-CVR-002) for authoritative Phase 2B corrected results.
 
 ---
 

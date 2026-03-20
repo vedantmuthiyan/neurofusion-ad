@@ -1,10 +1,3 @@
----
-document_id: sad-architecture
-generated: 2026-02-26T22:55:20.908378
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # SOFTWARE ARCHITECTURE DOCUMENT
 ## NeuroFusion-AD: Multimodal GNN for Alzheimer's Disease Progression Prediction
 

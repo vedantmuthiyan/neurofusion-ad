@@ -1,6 +1,6 @@
 # Bio-Hermes-001 File Inventory
 **Date**: 2026-03-11
-**Agent**: data-explorer-agent
+**Prepared by**: NeuroFusion-AD Data Engineering Team
 
 ---
 

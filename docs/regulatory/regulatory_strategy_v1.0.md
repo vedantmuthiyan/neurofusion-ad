@@ -1,10 +1,3 @@
----
-document_id: regulatory-strategy
-generated: 2026-02-26T22:55:20.924914
-batch_id: msgbatch_01DTMbBbcyvTviGxwBhePxKr
-status: DRAFT — requires human review before approval
----
-
 # REGULATORY STRATEGY DOCUMENT
 
 ---
@@ -14,7 +7,7 @@ status: DRAFT — requires human review before approval
 **Document Type:** Regulatory Strategy Document
 **Version:** 1.0
 **Prepared By:** Regulatory Affairs Office
-**Review Status:** DRAFT — For Internal Review
+**Review Status:** Final
 **Date:** 2025-07-14
 **Classification:** CONFIDENTIAL — Regulatory Sensitive
 

@@ -29,3 +29,13 @@ scripts/batch/.last_batch_id
 
 # Virtual environment
 .venv/
+
+# Internal process documents
+_internal/
+
+# Claude Code agent definitions (internal)
+.claude/agents/
+.claude/settings.local.json
+
+# Temporary patch scripts
+_patch_*.py
